@@ -1,31 +1,37 @@
-# Glow Stack — iPhone-friendly update
+# Glow Stack — iPhone Full-Screen Sizing Fix (v5)
 
-A standalone, offline-capable falling-block game with a black/deep-blue neon design, a large playfield, and iPhone-friendly touch controls. No build system or external scripts are required.
+A standalone falling-block game with a dark-blue neon theme, built for mobile Safari and Home Screen play. No dependencies, compilation, or cloud account required.
 
-## What's fixed in this version
+## Latest v5 adjustment
 
-- Automatically fits the entire game, controls, and iPhone safe areas on small and large screens.
-- Prevents accidental double-tap zoom, Safari text selection, highlights, and the long-press callout during gameplay.
-- Play directly on the board: **tap to rotate**, **drag horizontally to move**, **drag down to move down**, **swipe up to rotate**, or **flick down quickly for an instant drop**. Buttons are also provided.
-- Instant drop now **locks the piece immediately** and spawns the next one immediately. Pieces that settle naturally have a brief (~700 ms) lock delay to allow last-second sideways movement/rotation.
-- Clearing a line produces glowing sparks, a sweep/flash, and a visible score bonus. The next piece spawns without waiting for the effect to finish.
-- Scores follow the original BPS single/double/triple/quad clear values: **40 / 100 / 300 / 1200**. Scores do **not** multiply by level. Manual drops do not add points.
-- Gradual, forgiving gravity increases through level 20; unlimited levels afterward.
-- Shows Level, Score, Best; a Hold slot; and the next two pieces.
-- Pause/Resume, Restart Level, and Reset to Level 1. Best score stays saved when restarting.
-- Local browser saving; automatically imports an existing Glow Stack v1/v2 save if present on the same browser and site address.
+- Fixed the excessive empty black area at the bottom of some iPhone 15 and 16 Pro Max Home Screen versions. The older app incorrectly chose the shortest of multiple viewport height measurements. v5 uses the actual CSS dynamic screen height (`100dvh`) and retains explicit iPhone safe-area padding, so the board scales into the available space while the buttons remain visible.
+- Gameplay, existing scores, controls, hold, infinite levels and animated line clearing are preserved unchanged. Your saved game continues on the same website.
 
-## Publish an update to your GitHub Pages site
+## Improvements
 
-1. **Extract** the ZIP first. Do not upload the ZIP itself as a site file.
-2. In your **Glow Stack game repository** (not the health app repository), open the root/main branch and upload these three files, replacing `index.html` and `README.md` if prompted: `index.html`, `README.md`, `.nojekyll`.
-3. Commit the changes. GitHub Pages normally republish automatically. If Pages is not enabled, go to **Settings → Pages → Deploy from a branch → main → /(root)**.
-4. On your iPhone, reopen or refresh your existing game URL. If an older page is still cached, close the Home Screen app/Safari tab and reopen it, or use a private Safari tab to confirm the new deployment.
+- Rebuilt the screen layout as a four-row responsive grid so the top Level / Score / Best bar, playing field, six movement buttons, and bottom Pause / Restart Level / Level 1 buttons fit within the *usable* phone viewport.
+- Allows for iPhone safe areas, status bar, browser viewport resizing, and the Home indicator. Tested in desktop Chromium with iPhone 15 and 16 Pro Max viewport simulations and additional safe-area spacing. Physical Safari testing is recommended.
+- Prevents unwanted text selection, tapping highlights, Safari callouts, and game-area double-tap zoom.
+- **Restart Level** now works immediately, clears the board, restores the score at the beginning of the current level, and resumes playing. **Level 1** immediately starts a fresh game from zero. Neither erases the personal best.
+- **Pause / Resume** works before, during, and after line-clear animations.
+- **Line clears** now have a deliberate 760-millisecond sequence: full rows brighten, colored sparks appear, then the remaining blocks descend smoothly. The next playable piece is already prepared and appears after the animation. Ordinary hard drops (without a clear) spawn the next piece immediately.
+- Simple scoring: **40 / 100 / 300 / 1200** points for 1 / 2 / 3 / 4 cleared rows. No level multiplier. Soft drops do not add points.
+- Gravity starts gently and speeds up gradually through level 20. Levels continue indefinitely beyond 20, with a lower bound on the gravity interval.
+- Touch: tap the board to rotate; drag left/right to slide; drag down to lower; swipe up to rotate; flick down quickly to lock instantly. Six large on-screen controls provide the same functions, plus Hold.
+- Next two pieces and Hold are always displayed. Hold swaps once per falling piece.
+- Best score and game state save locally on the device; existing Glow Stack saves remain compatible.
 
-## Keyboard controls
+## Update your existing GitHub Pages game
 
-Left/right arrows move; up or X rotates; Z rotates the opposite way; down soft-drops; Space instantly locks; C or Shift holds; P pauses.
+1. Download and **unzip** `Glow-Stack-iPhone-Full-Screen-v5.zip`.
+2. Open your **Glow Stack** GitHub repository, *not* your separate health app repository.
+3. Upload `index.html`, `README.md`, and `.nojekyll` into the **repository root**, replacing the older files. Commit the change. **Do not upload the ZIP itself** to GitHub Pages.
+4. The existing Pages site updates after the new GitHub Pages deployment finishes. Reopen the game URL on each iPhone. If your Home Screen shortcut still shows the old layout, try the URL in Safari and reload; the shortcut may retain a cached copy.
 
-## Storage and privacy
+## Keyboard
 
-This is a separate game, not an extension of your health app. Best score and play progress are stored only in the current browser's `localStorage`, not the cloud. Clearing Safari website data can remove locally saved game progress.
+Left / Right: slide · Up or X: rotate · Z: rotate other direction · Down: soft drop · Space: hard drop · C or Shift: Hold · P or Esc: pause.
+
+## Storage
+
+Scores and progress are saved in browser local storage, not a cloud account. Clearing Safari site data or using a different browser or website address can remove local progress. The game does not change your existing health app or Supabase data.
