@@ -19,7 +19,7 @@ body,button,canvas,.shell,.stage,.rail{user-select:none;-webkit-user-select:none
 button{font:inherit;color:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;cursor:pointer;outline:none;-webkit-user-select:none;user-select:none}
 button:focus-visible{outline:2px solid #d7f6ff;outline-offset:2px}
 [hidden]{display:none!important}
-.shell{height:100vh;height:100dvh;position:fixed;inset:0;width:100%;max-width:740px;margin:auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;overflow:hidden;padding:max(8px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));gap:clamp(5px,.8dvh,8px);isolation:isolate}
+.shell{height:100dvh;height:var(--app-height, 100dvh);position:fixed;top:0;left:0;right:0;bottom:auto;width:100%;max-width:740px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;overflow:hidden;padding:max(8px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));gap:clamp(5px,.8dvh,8px);isolation:isolate}
 .scorebar{width:min(100%,490px);margin:0 auto;flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .stat{min-width:0;text-align:center;padding:6px 3px 5px;border-radius:12px;background:linear-gradient(145deg,rgba(14,34,56,.97),rgba(3,10,24,.95));border:1px solid rgba(71,147,211,.42);box-shadow:inset 0 1px 1px rgba(163,224,255,.13),0 0 14px rgba(14,118,225,.12)}
 .stat-label{display:block;color:var(--muted);letter-spacing:.15em;font-size:clamp(9px,2.2vw,11px);font-weight:800;text-transform:uppercase}
@@ -321,22 +321,51 @@ bindButton('restartButton',()=>{stopRepeat();touch=null;fresh(level,checkpointSc
 bindButton('resetButton',()=>{stopRepeat();touch=null;fresh();begin()});
 document.addEventListener('visibilitychange',()=>{stopRepeat();touch=null;if(document.hidden&&(status==='playing'||status==='clearing')){status='paused';refresh();save()}});
 window.addEventListener('pagehide',save);
-// iPhone sizing: 100dvh already tracks Safari's visible page and the installed
-// Home Screen app. Do not overwrite it with Math.min(innerHeight, visualViewport
-// height, clientHeight): on standalone iOS those values can DISAGREE by 80+ px,
-// incorrectly leaving an unused black strip below the controls.
+// Standalone iPhone apps can report a 100dvh that is ~80–120 CSS pixels
+// shorter than the physical Home Screen view. v4 used the shortest viewport;
+// v5 used 100dvh alone; BOTH left a large empty black strip. In installed
+// Home Screen mode, use the screen height (converted to page CSS px), never
+// the shorter visual viewport measurement. In a normal Safari tab, keep dvh
+// to avoid placing controls under Safari's browser toolbar.
+function updateScreenHeight(){
+  const standalone=(navigator.standalone===true)||window.matchMedia('(display-mode: standalone)').matches;
+  const width=window.innerWidth||document.documentElement.clientWidth||0;
+  if(standalone&&width>0&&window.screen){
+    const landscape=window.matchMedia('(orientation: landscape)').matches;
+    const sw=Number(window.screen.width),sh=Number(window.screen.height);
+    if(sw>0&&sh>0){
+      const screenShort=Math.min(sw,sh),screenLong=Math.max(sw,sh);
+      const physicalHeight=landscape?screenShort:screenLong;
+      // Display Zoom / viewport scaling: normalize the screen dimensions to
+      // current page CSS pixels, without assuming a particular iPhone model.
+      const screenWidth=landscape?screenLong:screenShort;
+      const ratio=width/screenWidth;
+      const candidate=Math.round(physicalHeight*ratio);
+      const minHeight=Math.max(window.innerHeight||0,document.documentElement.clientHeight||0);
+      if(candidate>=minHeight-4 && candidate<=minHeight+260 && ratio>.72&&ratio<1.35){
+        document.documentElement.style.setProperty('--app-height',candidate+'px');
+        return;
+      }
+    }
+  }
+  document.documentElement.style.removeProperty('--app-height');
+}
 function fit(){
+  updateScreenHeight();
   const stage=document.querySelector('.stage'),panel=document.querySelector('.board-panel'),rail=document.querySelector('.rail');
-  // Only size the board INSIDE the stage after the safe-area padding, score
-  // strip and both control rows have reserved their actual screen space.
   const sw=stage.clientWidth,sh=stage.clientHeight,rw=rail.getBoundingClientRect().width;
   if(!sw||!sh||!rw)return;
+  // Always derive a 10×20 playfield from the CURRENT stage size; don't let
+  // any stale pixel height from an earlier screen orientation control it.
   const width=Math.max(70,Math.min(400,Math.floor((sh-2)/2),Math.floor(sw-rw-8)));
-  panel.style.width=width+'px';panel.style.height=(width*2)+'px';
+  panel.style.width=width+'px';panel.style.height=width*2+'px';
 }
 if(window.ResizeObserver){const obs=new ResizeObserver(fit);obs.observe(document.querySelector('.stage'))}
-window.addEventListener('resize',fit);window.addEventListener('orientationchange',()=>requestAnimationFrame(fit));
+window.addEventListener('resize',fit);
+window.addEventListener('pageshow',fit);
+window.addEventListener('orientationchange',()=>{requestAnimationFrame(fit);setTimeout(fit,250)});
 window.visualViewport?.addEventListener('resize',fit);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestAnimationFrame(fit)});
 if(!load())fresh();refresh();fit();requestAnimationFrame(frame);
 })();
 </script>
