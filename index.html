@@ -500,11 +500,14 @@ function leaderboardError(e){
   return 'Supabase: '+msg.slice(0,190)+(code?' ['+code.slice(0,45)+']':'');
 }
 async function initializeLeaderboard(createPlayer=false){
-  if(lbClient&&lbUser)return;
+  // Wait for a previously opened leaderboard to finish loading the
+  // existing profile. Do not treat a user ID without a loaded profile as
+  // a completed registration; this protects quick Save Name taps.
   if(lbLoading){
     await lbLoading;
     if(lbUser||!createPlayer)return;
   }
+  if(lbClient&&lbUser)return;
   lbLoading=(async()=>{
     // The CDN library is optional to offline gameplay. The menu reports an
     // actionable error when not yet loaded instead of affecting the game.
