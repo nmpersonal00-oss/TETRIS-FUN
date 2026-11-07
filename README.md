@@ -37,7 +37,7 @@ Tap **X** to close the options/challenges menu and **automatically resume the ga
 
 ## Display behavior
 
-The layout uses CSS `100dvh` and `viewport-fit=cover`, without changing the board's 1:1.86 presentation ratio or game controls. **The top strip now honors `env(safe-area-inset-top)` in browser mode** and reserves at least **76px above the top stats in portrait installed iOS Home Screen mode** to clear taller Dynamic Islands, clocks, status icons and Display Zoom configurations. Both CSS `display-mode:standalone` and the older iOS `navigator.standalone` signal are supported. The horizontal and bottom padding remains only 3px so the board uses the remaining height automatically.
+The layout uses CSS `100dvh` and `viewport-fit=cover`, without changing the board's 1:1.86 presentation ratio or game controls. **The top strip honors `env(safe-area-inset-top)` in browser mode**. Installed iOS Home Screen web apps can render in one of two layouts: (1) edge-to-edge, requiring the established **76px status bar / Dynamic Island clearance**; or (2) a viewport already shortened by approximately 44–62px after reinstalling the app, where applying that 76px *again* produces a huge empty top gap and squishes the board. The game detects the second situation using the standalone flag and screen-versus-viewport geometry, and applies only 6px *inside the already inset viewport*. This restores the board's height without putting controls under the island. The horizontal and bottom padding remains only 3px.
 
 The `manifest.webmanifest` continues to declare a standalone app. This slightly reduces available board height on some iPhones to keep all four top controls visible and tappable. **Do not remove the top clearance**: that was the cause of the hidden/unusable top controls reported on a second iPhone.
 
@@ -45,7 +45,7 @@ The `manifest.webmanifest` continues to declare a standalone app. This slightly 
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. **All Playwright pages block outbound network requests** and Supabase functionality is simulated with local mocks; running automated tests never creates production anonymous accounts or touches the live Supabase tables. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, plus a freshly installed Home Screen app with a 62px already-excluded status bar, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. **All Playwright pages block outbound network requests** and Supabase functionality is simulated with local mocks; running automated tests never creates production anonymous accounts or touches the live Supabase tables. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
 
 You can run locally with Python + Playwright/Chromium:
 
