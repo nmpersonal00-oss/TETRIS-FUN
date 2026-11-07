@@ -49,21 +49,29 @@ def run():
                       };
                       return {shell:rect('.shell'),score:rect('.scorebar'),
                               stage:rect('.stage'),board:rect('.board-panel'),
-                              rail:rect('.rail'),hold:rect('#holdBox'),
-                              next:rect('#nextOne'),nextCard:rect('.rail .preview-card:first-child'),
+                              hold:rect('#holdBox'),
+                              next:rect('#nextOne'),nextCard:rect('.next-top'),
                               viewport:[innerWidth,innerHeight]};
                     }""")
-                    board, stage, rail = (metrics[k] for k in ("board","stage","rail"))
+                    board, stage, hold = (metrics[k] for k in ("board","stage","hold"))
                     assert not page.locator(".controls").count(), (name,"old controls present")
                     assert not page.locator(".actions").count(), (name,"old action buttons present")
                     assert page.locator("#nextTwo").count()==0, (name,"second next piece present")
                     assert metrics["shell"]["bottom"] <= height+1, (name,"shell outside viewport",metrics)
                     assert metrics["score"]["top"] >= metrics["shell"]["top"], (name,"score clipped",metrics)
                     assert board["top"] >= stage["top"]-1 and board["bottom"] <= stage["bottom"]+1, (name,"board vertical clipping",metrics)
-                    assert board["left"] >= stage["left"]-1 and board["right"] < rail["left"], (name,"board overlapping Hold/Next",metrics)
+                    assert board["left"] >= stage["left"]-1 and board["right"] <= stage["right"]+1, (name,"board horizontal clipping",metrics)
                     assert abs(board["height"]-board["width"]*2)<1, (name,"board aspect ratio",metrics)
-                    assert abs(metrics["nextCard"]["top"]-board["top"]) < 3, (name,"Next should align with top of board",metrics)
-                    assert abs(metrics["hold"]["bottom"]-board["bottom"]) < 3, (name,"Hold should align with bottom of board",metrics)
+                    assert metrics["score"]["height"]<=64, (name,"top stats too tall",metrics)
+                    assert abs(metrics["nextCard"]["top"]-metrics["score"]["top"])<2, (name,"Next not in top bar",metrics)
+                    assert metrics["nextCard"]["bottom"]<=metrics["score"]["bottom"]+1,(name,"Next overflows header",metrics)
+                    assert hold["height"]<=58, (name,"Hold too tall",metrics)
+                    assert hold["top"]>=stage["bottom"]-1,(name,"Hold collides with board",metrics)
+                    assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
+                    assert hold["bottom"]<=metrics["shell"]["bottom"]+1, (name,"Hold clipped offscreen",metrics)
+                    if height>width and width>=360:
+                        assert board["width"]>=.75*width, (name,"board too skinny",metrics)
+                        assert stage["height"]-board["height"]<=60, (name,"board not using available height",metrics)
                     if inset: assert metrics["score"]["top"] >= 62,(name,"safe area not respected",metrics)
 
                     # Start, pause by tapping Level, enter empty Challenges,
