@@ -31,13 +31,15 @@ Tap **X** to close the options/challenges menu and **automatically resume the ga
 
 ## Display behavior
 
-This version **removes the old iPhone-specific 64px JavaScript guard, device detection, manual sizing calibration, synthetic viewport height and button rows**. It uses CSS `100dvh`, `viewport-fit=cover`, and **no CSS `safe-area-inset-*` padding**. The bottom uses only 3px of ordinary padding, reclaiming the previously unused strip inside the page. A fixed 49px top clearance **only in portrait standalone app mode** keeps the score bar clear of the iPhone clock; this is not an iOS safe-area variable or JavaScript viewport lock. The `manifest.webmanifest` declares a standalone app.
+The layout uses CSS `100dvh` and `viewport-fit=cover`, without changing the board's 1:1.86 presentation ratio or game controls. **The top strip now honors `env(safe-area-inset-top)` in browser mode** and reserves at least **76px above the top stats in portrait installed iOS Home Screen mode** to clear taller Dynamic Islands, clocks, status icons and Display Zoom configurations. Both CSS `display-mode:standalone` and the older iOS `navigator.standalone` signal are supported. The horizontal and bottom padding remains only 3px so the board uses the remaining height automatically.
+
+The `manifest.webmanifest` continues to declare a standalone app. This slightly reduces available board height on some iPhones to keep all four top controls visible and tappable. **Do not remove the top clearance**: that was the cause of the hidden/unusable top controls reported on a second iPhone.
 
 **Hardware limitation:** iOS controls the clock/status icons and may reserve a system area outside the webpage. A website cannot hide the iPhone's Dynamic Island or reclaim pixels that the installed web view does not expose, even if a native game can. The dark app background is designed to blend into the system area where supported. Older installed Home Screen icons may retain their original launch-mode settings.
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 11 phone geometry configurations including shortened viewports and simulated installed-app top clearance; validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 54px, and minimum visible held-piece size. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
 
 You can run locally with Python + Playwright/Chromium:
 
@@ -67,8 +69,10 @@ The leaderboard uses the existing **Wifey & Hubby** Supabase project, in its new
 
 The leaderboard stores the score and current level in `public.glow_stack_leaderboard` (`current_level` has a 1–1,000,000 database constraint). Scores are ranked by `best_score`, not current level. The leaderboard tracks **one player identity per installed app/browser storage profile**. For best results, each person plays on their own phone. Anonymous identities stay on that installed app: if you delete the icon, sign out, or clear storage, the anonymous identity may be unrecoverable even though its score row remains online. Adding recovery with email/password can be done later. Username edits rename only your own player record; a name already claimed by someone else cannot be reused.
 
-The original game's local saved-game keys are unchanged and its local Best display continues to represent the previous device-local record. Online rankings are separate and cannot display while offline, but gameplay still works. Submissions queue a retry for transient offline failures. Since the game score is calculated in the public browser, this is a friendly competition rather than a tamper-proof anti-cheat leaderboard.
+The original game's local saved-game keys are unchanged. When you register a name, the app now **imports your existing local Best score** into Supabase, including scores achieved before signing up. On subsequent opens it reconciles stored and online bests in both directions using the higher value, so the Best tile and leaderboard agree. The online database trigger prevents lower scores from replacing a personal best. Current Score still displays the active run separately, and restarting at Level 1 does not reduce Best.
+
+Online rankings cannot display while offline, but gameplay still works. Submissions queue a retry for transient offline failures. Since the game score is calculated in the public browser, this is a friendly competition rather than a tamper-proof anti-cheat leaderboard.
 
 ### Test coverage
 
-Automated tests cover 11 phone sizes, menu pause/resume, Hold and restart actions, trophy page navigation, plus a mocked Supabase scenario verifying password-free player creation, best-score ranking, current level labels on Leaderboard, and current level comparisons in Challenges. An end-to-end real anonymous-auth test on both physical phones is still recommended once Anonymous Sign-Ins is enabled.
+Automated tests cover 15 phone sizes and top-inset scenarios, menu pause/resume, Hold and restart actions, trophy page navigation, and mocked Supabase scenarios verifying password-free registration, old local Best import on first username save, a 120-point online record increasing to the previous 4,960 local record, survival of restarts, best-score ranking, current levels and Challenges. An end-to-end real anonymous-auth test on both physical phones is still recommended once Anonymous Sign-Ins is enabled.
