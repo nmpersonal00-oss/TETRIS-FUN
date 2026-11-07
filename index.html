@@ -252,6 +252,14 @@ window.addEventListener('resize',updateSafeAreaFallback);
 window.addEventListener('orientationchange',updateSafeAreaFallback);
 const W=10,H=20,CELL=30;
 const STORE='glow-stack-save-v3',BEST='glow-stack-best-v3';
+const MODE_STORE='glow-stack-mode-v1',CHALLENGE_STORE='glow-stack-challenge-v1-';
+const CHALLENGES={
+  lines:{title:'LINE LADDER'},
+  sprint:{title:'SPRINT 40'},
+  score:{title:'SCORE CLIMB'},
+  nohold:{title:'NO-HOLD TRIAL'}
+};
+const SCORE_GOALS=[100,250,500,900,1400];
 const OLD_SAVES=['glow-stack-save-v2','glow-stack-save-v1'];
 const OLD_BEST=['glow-stack-best-v2','glow-stack-best-v1'];
 const SHAPES={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
@@ -262,6 +270,7 @@ const previews=[$('held'),$('nextOne')].map(el=>el.getContext('2d'));
 let board,active,queue=[],bag=[],held=null,holdUsed=false,score=0,best=0,level=1,lines=0;
 let checkpointScore=0,checkpointLines=0,status='ready',fallTime=0,lockTime=0,lockResets=0,saveTime=0,lastFrame=0;
 let effect=null,particles=[],effectTime=0;
+let mode='marathon',challengeElapsedMs=0,checkpointElapsedMs=0,lastHudTick=0;
 let menuOpen=false,menuWasPlaying=false;
 const LB_URL='https://gtcybnvjdcmuzegxwiic.supabase.co';
 const LB_PUBLIC_KEY='sb_publishable_GBuQ25Z5CNBwW3iYEGLb8A_VEsxwReg';
@@ -269,6 +278,57 @@ let lbClient=null,lbUser=null,lbUsername='',lbBest=0,lbSyncPending=false,lbSendi
 let lbRows=[];
 
 const blank=()=>Array.from({length:H},()=>Array(W).fill(null));
+const isChallenge=()=>mode!=='marathon';
+const saveSlot=()=>isChallenge()?CHALLENGE_STORE+mode:STORE;
+function elapsedText(ms){
+  const seconds=Math.floor(ms/1000),minutes=Math.floor(seconds/60);
+  return String(minutes).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+}
+function goalText(){
+  if(mode==='lines')return (lines%5)+'/5 lines until next level';
+  if(mode==='sprint')return Math.min(40,lines)+'/40 lines · '+elapsedText(challengeElapsedMs);
+  if(mode==='score')return Math.min(score,SCORE_GOALS[Math.min(level-1,4)])+'/'+SCORE_GOALS[Math.min(level-1,4)]+' points';
+  if(mode==='nohold')return Math.min(50,lines)+'/50 lines · Hold disabled';
+  return '';
+}
+function updateChallengeHud(){
+  const hud=$('challengeHud');
+  hud.hidden=!isChallenge();
+  if(!isChallenge())return;
+  $('challengeHudTitle').textContent=CHALLENGES[mode].title+' · LEVEL '+level;
+  $('challengeHudGoal').textContent=status==='won'?'Completed! '+goalText():goalText();
+}
+function renderChallengeChoices(){
+  $('challengeSelectionStatus').textContent=isChallenge()
+    ?'Current: '+CHALLENGES[mode].title+' · Level '+level+' · '+goalText()
+    :'Current: Classic Marathon · Level '+level;
+  document.querySelectorAll('[data-game-mode]').forEach(button=>{
+    const selected=button.dataset.gameMode===mode;
+    button.setAttribute('aria-pressed',String(selected));
+    let saved=false;
+    try{saved=!!localStorage.getItem(button.dataset.gameMode==='marathon'?STORE:CHALLENGE_STORE+button.dataset.gameMode)}catch(_){}
+    button.querySelector('.challenge-option-action').textContent=selected?'CONTINUE':saved?'RESUME':'PLAY';
+  });
+}
+function progressForChallenge(){
+  const oldLevel=level;
+  if(mode==='lines')level=1+Math.floor(lines/5);
+  else if(mode==='sprint')level=Math.min(4,1+Math.floor(lines/10));
+  else if(mode==='nohold')level=Math.min(5,1+Math.floor(lines/10));
+  else if(mode==='score')level=Math.min(5,1+SCORE_GOALS.filter(goal=>score>=goal).length);
+  else level=1+Math.floor(lines/10);
+  if(level>oldLevel){
+    checkpointScore=score;
+    checkpointLines=mode==='marathon'?(level-1)*10:lines;
+    checkpointElapsedMs=challengeElapsedMs;
+  }
+  if(mode==='sprint'&&lines>=40||
+     mode==='nohold'&&lines>=50||
+     mode==='score'&&score>=SCORE_GOALS[SCORE_GOALS.length-1]){
+    status='won';
+  }
+}
+
 const validName=n=>typeof n==='string'&&Object.prototype.hasOwnProperty.call(SHAPES,n);
 function bagShuffle(){const a=names.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function take(){if(!bag.length)bag=bagShuffle();return bag.pop()}
@@ -278,12 +338,13 @@ function collide(shape,x,y){for(let r=0;r<shape.length;r++)for(let c=0;c<shape[r
 function grounded(){return !!active&&collide(active.shape,active.x,active.y+1)}
 function makeActive(name){const shape=copyShape(name);active={name,shape,x:Math.floor((W-shape[0].length)/2),y:0};fallTime=0;lockTime=0;lockResets=0;if(collide(shape,active.x,active.y)){status='over';save()}}
 function spawn(){fillQueue();makeActive(queue.shift());fillQueue()}
-function fresh(lvl=1,points=0,completedLines=(lvl-1)*10){
+function fresh(lvl=1,points=0,completedLines=(lvl-1)*10,elapsedMs=0){
   board=blank();queue=[];bag=[];held=null;holdUsed=false;
   level=lvl;score=points;lines=completedLines;checkpointScore=points;checkpointLines=completedLines;
+  challengeElapsedMs=elapsedMs;checkpointElapsedMs=elapsedMs;
   fallTime=0;lockTime=0;lockResets=0;effect=null;particles=[];status='ready';
   $('clearToast').classList.remove('show');spawn();refresh();save();
-  if(lbUsername&&lbUser)queueLeaderboardScore();
+  if(mode==='marathon'&&lbUsername&&lbUser)queueLeaderboardScore();
 }
 // The Best tile is the device's stored personal record, including runs played
 // before the player signed up. The online leaderboard must represent that SAME
@@ -298,10 +359,13 @@ function adoptPersonalBest(onlineScore=0){
 }
 function addPoints(n){
   score=Math.min(Number.MAX_SAFE_INTEGER,score+n);
-  if(score>best){best=score;try{localStorage.setItem(BEST,String(best))}catch(_){}}
-  if(lbUsername&&lbUser){
-    adoptPersonalBest();
-    if(lbBest>lbLastSent)queueLeaderboardScore();
+  // Only Classic Marathon updates the couple's shared leaderboard and Best tile.
+  if(mode==='marathon'){
+    if(score>best){best=score;try{localStorage.setItem(BEST,String(best))}catch(_){}}
+    if(lbUsername&&lbUser){
+      adoptPersonalBest();
+      if(lbBest>lbLastSent)queueLeaderboardScore();
+    }
   }
 }
 function manipulated(wasGrounded){if(wasGrounded&&lockResets<12){lockTime=0;lockResets++}if(!grounded())lockTime=0;refresh()}
@@ -314,7 +378,7 @@ function rotate(direction=1){if(status!=='playing'||!active)return;const was=gro
 }
 function softDrop(){if(status!=='playing'||!active)return;if(!grounded()){active.y++;fallTime=0;lockTime=0;refresh()}}
 function hardDrop(){if(status!=='playing'||!active)return;while(!collide(active.shape,active.x,active.y+1))active.y++;lockPiece();refresh()}
-function hold(){if(status!=='playing'||holdUsed)return;const current=active.name;if(held===null){held=current;spawn()}else{const swap=held;held=current;makeActive(swap)}holdUsed=true;refresh();save()}
+function hold(){if(status!=='playing'||holdUsed||mode==='nohold')return;const current=active.name;if(held===null){held=current;spawn()}else{const swap=held;held=current;makeActive(swap)}holdUsed=true;refresh();save()}
 function showClear(rows,earned,prev){
   effectTime=0;effect={rows:rows.slice(),snapshot:prev.map(r=>r.slice()),duration:760};particles=[];
   for(const y of rows)for(let i=0;i<34;i++){
@@ -331,31 +395,34 @@ function lockPiece(){if(!active)return;
     board=Array.from({length:clearedRows.length},()=>Array(W).fill(null)).concat(board.filter((_,i)=>!remove.has(i)));
     const earned=[0,40,100,300,1200][clearedRows.length];
     addPoints(earned);lines+=clearedRows.length;
-    const newLevel=1+Math.floor(lines/10);
-    if(newLevel>level){level=newLevel;checkpointScore=score;checkpointLines=(level-1)*10}
+    progressForChallenge()
     // Board is updated for saving, but rendered from the full pre-clear snapshot
     // until the 760 ms reveal and row-drop animation finishes.
     showClear(clearedRows,earned,snapshot);
   }
-  holdUsed=false;spawn();
-  if(clearedRows.length && status!=='over')status='clearing';
+  holdUsed=false;
+  if(status!=='won')spawn();
+  if(clearedRows.length && status!=='over' && status!=='won')status='clearing';
   save();
-  if(lbUsername&&lbUser&&level!==lbLastLevelSent)queueLeaderboardScore();
+  if(mode==='marathon'&&lbUsername&&lbUser&&level!==lbLastLevelSent)queueLeaderboardScore();
 }
-// Endless progression: beginner-friendly through level 20, faster only at advanced levels.
-function interval(lvl){return lvl<=20?1500-(lvl-1)*(680/19):Math.max(125,820*Math.pow(.965,lvl-20))}
-function begin(){if(status==='over')fresh();if(status==='ready'||status==='paused'){status=effect?'clearing':'playing';fallTime=0;lastFrame=performance.now();refresh();save()}}
+// Two percent quicker every five completed levels, with a gentle lower cap.
+// Levels 1–5: 1500ms per row; 6–10: 1470ms; 16–20: ~1412ms.
+function interval(lvl){return Math.max(1100,1500*Math.pow(.98,Math.floor((Math.max(1,lvl)-1)/5)))}
+function begin(){if(status==='over'||status==='won')fresh();if(status==='ready'||status==='paused'){status=effect?'clearing':'playing';fallTime=0;lastFrame=performance.now();refresh();save()}}
 function pause(){if(menuOpen)closeMenu();else openMenu()}
 function refresh(){
   $('level').textContent=level.toLocaleString();$('score').textContent=score.toLocaleString();$('best').textContent=best.toLocaleString();
-  $('holdBox').classList.toggle('unavailable',holdUsed);
-  $('holdBox').querySelector('.preview-subtitle').textContent=holdUsed?'WAIT FOR NEXT':'TAP TO SWAP';
-  $('holdBox').setAttribute('aria-disabled',String(holdUsed||status!=='playing'));
+  $('holdBox').classList.toggle('unavailable',holdUsed||mode==='nohold');
+  $('holdBox').querySelector('.preview-subtitle').textContent=mode==='nohold'?'NO HOLD':holdUsed?'WAIT FOR NEXT':'TAP TO SWAP';
+  $('holdBox').setAttribute('aria-disabled',String(mode==='nohold'||holdUsed||status!=='playing'));
   $('overlay').hidden=status==='playing'||status==='clearing';
   $('overlayTitle').hidden=status==='ready';
   if(status==='ready')$('playButton').textContent='PLAY';
   else if(status==='paused'){$('overlayTitle').textContent='PAUSED';$('playButton').textContent='RESUME'}
   else if(status==='over'){$('overlayTitle').textContent='GAME OVER';$('playButton').textContent='PLAY AGAIN'}
+  else if(status==='won'){$('overlayTitle').textContent='CHALLENGE COMPLETE';$('playButton').textContent='PLAY AGAIN'}
+  updateChallengeHud();
   draw();drawPreviews();
 }
 function rounded(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
