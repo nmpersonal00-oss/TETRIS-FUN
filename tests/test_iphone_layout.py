@@ -103,6 +103,8 @@ def run():
                     after=page.locator("#held").evaluate("(e) => e.toDataURL()")
                     assert before!=after,(name,"Hold did not update held preview")
                     assert "unavailable" in page.locator("#holdBox").get_attribute("class"),(name,"Hold should only be usable once per piece")
+                    assert page.locator("#holdBox").evaluate("(e)=>getComputedStyle(e).opacity")=="1",(name,"Held piece faded after use")
+                    assert page.locator("#holdBox .preview-subtitle").inner_text()=="WAIT FOR NEXT",(name,"Hold cooldown label missing")
                     # Verify that Hold has large, visible blocks IN the canvas,
                     # not merely a wider blank space around a tiny shape.
                     held_pixels=page.locator("#held").evaluate("""e=>{
