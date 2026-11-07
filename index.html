@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- A newly installed Home Screen icon should use the system-managed status bar. -->
 <title>Glow Stack</title>
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js"></script>
 <meta name="application-name" content="Glow Stack">
 <meta name="description" content="Neon block-stacking game optimized for iPhone.">
 <style>
@@ -62,10 +63,10 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .next-top{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;height:100%;padding:3px 2px;overflow:hidden}
 .next-top canvas{display:block;width:clamp(36px,9vw,43px);height:auto;aspect-ratio:6/5;margin:0 auto}
 .hold-strip{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;min-height:0}
-.hold-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;height:clamp(48px,5.5dvh,53px);width:min(100%,300px);padding:2px clamp(12px,4vw,18px);border-radius:12px}
+.hold-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;height:clamp(57px,6.4dvh,64px);width:min(100%,300px);padding:4px clamp(12px,4vw,18px);border-radius:12px}
 .hold-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .hold-copy .preview-label,.hold-copy .preview-subtitle{text-align:left}
-.hold-bar canvas{flex:0 0 auto;display:block;width:clamp(122px,35vw,144px);height:auto;aspect-ratio:3/1}
+.hold-bar canvas{flex:0 0 auto;display:block;width:clamp(132px,37vw,153px);height:auto;aspect-ratio:3/1}
 .overlay{position:absolute;inset:0;z-index:6;background:rgba(0,5,15,.73);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .overlay-title{text-align:center;font-size:clamp(18px,4vw,25px);font-weight:900;letter-spacing:.13em;color:#e6f7ff;text-shadow:0 0 16px #398bcc}
 .play-btn{border:1px solid #99e1ff;background:linear-gradient(140deg,#1a76b3,#0d396b);color:#eefaff;font-size:14px;font-weight:850;letter-spacing:.11em;border-radius:100px;padding:16px 35px;box-shadow:0 0 24px rgba(46,160,244,.42)}
@@ -86,8 +87,28 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .menu-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;color:#e6f6ff;font-size:23px;font-weight:550}
 .menu-back{position:absolute;left:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;font-size:21px}
 .challenge-empty{height:clamp(190px,36dvh,300px);border:1px dashed rgba(92,172,224,.3);border-radius:14px;margin-top:23px;background:radial-gradient(ellipse at center,#15305555,#07112222)}
-@media(max-width:360px){.shell{gap:3px}.scorebar{height:46px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(65px,.85fr)}.stat-value{font-size:16px}.stat-label{font-size:8px}.next-top canvas{width:36px}.hold-bar{height:48px}}
-@media(max-height:670px){.shell{gap:3px}.scorebar{height:44px}.stat-value{font-size:16px}.hold-bar{height:47px}.next-top canvas{width:36px}.menu-card{padding-top:18px}}
+@media(max-width:360px){.shell{gap:3px}.scorebar{height:46px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(65px,.85fr)}.stat-value{font-size:16px}.stat-label{font-size:8px}.next-top canvas{width:36px}.hold-bar{height:55px}}
+@media(max-height:670px){.shell{gap:3px}.scorebar{height:44px}.stat-value{font-size:16px}.hold-bar{height:54px}.next-top canvas{width:36px}.menu-card{padding-top:18px}}
+.leaderboard-page{display:grid;gap:13px}
+.trophy-hero{display:grid;grid-template-columns:94px minmax(0,1fr);align-items:center;gap:10px;background:radial-gradient(circle at 25% 45%,#174b74 0%,#0b2341 46%,#06152b 100%);border:1px solid #458fba;border-radius:16px;padding:8px 10px;box-shadow:0 0 23px #0c66b24a,inset 0 0 18px #64c0f012}
+.trophy-hero img{display:block;width:94px;height:94px;object-fit:contain;filter:drop-shadow(0 0 12px #33bfff)}
+.trophy-hero strong{display:block;color:#d8f5ff;letter-spacing:.085em;font-size:15px}
+.trophy-hero small{display:block;color:#a4c9e5;font-size:11px;line-height:1.6;margin-top:5px}
+.board-form{display:flex;flex-direction:column;gap:7px}
+.board-form label{font-size:11px;font-weight:800;color:#addbf8;letter-spacing:.12em;text-transform:uppercase}
+.board-inputrow{display:flex;gap:8px}
+.board-inputrow input{min-width:0;width:100%;min-height:45px;border-radius:11px;border:1px solid #498ab9;background:#071b30;color:#ebfaff;padding:10px 12px;font:700 15px system-ui;touch-action:manipulation;user-select:text;-webkit-user-select:text}
+.board-inputrow button{padding:0 13px;white-space:nowrap;flex:0 0 auto;background:linear-gradient(125deg,#167db4,#153f79);border:1px solid #67c3fb;border-radius:11px;color:#ecfbff;font-size:12px;font-weight:850}
+.board-status{font-size:11px;line-height:1.5;min-height:16px;color:#b4dbf4}
+.board-status.error{color:#ffafb6}
+.board-list{display:grid;gap:8px;list-style:none;padding:0;margin:0;max-height:min(30dvh,250px);overflow:auto;touch-action:pan-y}
+.board-list li{border:1px solid #305e8d;border-radius:12px;background:linear-gradient(125deg,#103450,#08182e);display:grid;grid-template-columns:36px 1fr auto;gap:9px;align-items:center;padding:10px;min-height:54px}
+.board-list li.first{border-color:#c8aa60;background:linear-gradient(120deg,#463824,#132843)}
+.board-list li.me{box-shadow:inset 0 0 0 1px #67ccfa}
+.board-rank{font-weight:900;color:#7ee1ff;font-size:18px}
+.board-list .first .board-rank{color:#ffe58e}
+.board-person{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850;font-size:13px}
+.board-points{font-variant-numeric:tabular-nums;color:#e2f7ff;font-weight:900;font-size:14px}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
 </style></style>
 </head>
@@ -135,11 +156,26 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
         <div class="menu-buttons">
           <button class="menu-choice" type="button" id="restartButton">↻ &nbsp; Restart Level</button>
           <button class="menu-choice" type="button" id="resetButton">⟲ &nbsp; Restart at Level 1</button>
+          <button class="menu-choice secondary" type="button" id="leaderboardButton">🏆 &nbsp; Leaderboard</button>
           <button class="menu-choice secondary" type="button" id="challengesButton">◇ &nbsp; Challenges</button>
         </div>
       </div>
       <div id="challengesPage" hidden aria-label="Challenges page">
         <div class="challenge-empty" aria-label="Challenges area is empty"></div>
+      </div>
+      <div id="leaderboardPage" class="leaderboard-page" hidden aria-label="Shared leaderboard">
+        <div class="trophy-hero"><img src="./assets/neon-trophy.svg" alt="Gold and cyan neon trophy with glowing blocks">
+          <div><strong>NEON CHAMPIONS</strong><small>Two phones. One leaderboard.<br>Highest score takes the crown.</small></div>
+        </div>
+        <div class="board-form">
+          <label for="playerNameInput">Your player name</label>
+          <div class="board-inputrow">
+            <input type="text" id="playerNameInput" maxlength="18" autocomplete="nickname" placeholder="Choose a name" pattern="[A-Za-z0-9 _-]{2,18}">
+            <button type="button" id="savePlayerButton">SAVE NAME</button>
+          </div>
+          <div id="boardStatus" class="board-status" role="status" aria-live="polite">Connecting to the leaderboard…</div>
+        </div>
+        <ol id="leaderboardList" class="board-list" aria-label="Best scores"></ol>
       </div>
     </div>
   </section>
@@ -160,6 +196,11 @@ let board,active,queue=[],bag=[],held=null,holdUsed=false,score=0,best=0,level=1
 let checkpointScore=0,checkpointLines=0,status='ready',fallTime=0,lockTime=0,lockResets=0,saveTime=0,lastFrame=0;
 let effect=null,particles=[],effectTime=0;
 let menuOpen=false,menuWasPlaying=false;
+const LB_URL='https://gtcybnvjdcmuzegxwiic.supabase.co';
+const LB_PUBLIC_KEY='sb_publishable_GBuQ25Z5CNBwW3iYEGLb8A_VEsxwReg';
+let lbClient=null,lbUser=null,lbUsername='',lbBest=0,lbSyncPending=false,lbLastSent=0,lbLastFetch=0,lbLoading=null,lbOpen=false;
+let lbRows=[];
+
 const blank=()=>Array.from({length:H},()=>Array(W).fill(null));
 const validName=n=>typeof n==='string'&&Object.prototype.hasOwnProperty.call(SHAPES,n);
 function bagShuffle(){const a=names.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -176,7 +217,13 @@ function fresh(lvl=1,points=0,completedLines=(lvl-1)*10){
   fallTime=0;lockTime=0;lockResets=0;effect=null;particles=[];status='ready';
   $('clearToast').classList.remove('show');spawn();refresh();save();
 }
-function addPoints(n){score=Math.min(Number.MAX_SAFE_INTEGER,score+n);if(score>best){best=score;try{localStorage.setItem(BEST,String(best))}catch(_){}}}
+function addPoints(n){
+  score=Math.min(Number.MAX_SAFE_INTEGER,score+n);
+  if(score>best){best=score;try{localStorage.setItem(BEST,String(best))}catch(_){}}
+  // Never attribute an old local score to another player: submit only points
+  // earned while the current authenticated device username is selected.
+  if(lbUsername&&lbUser&&score>lbBest){lbBest=score;queueLeaderboardScore();}
+}
 function manipulated(wasGrounded){if(wasGrounded&&lockResets<12){lockTime=0;lockResets++}if(!grounded())lockTime=0;refresh()}
 function move(dx){if(status!=='playing'||!active)return;const was=grounded();if(!collide(active.shape,active.x+dx,active.y)){active.x+=dx;manipulated(was)}}
 function rotate(direction=1){if(status!=='playing'||!active)return;const was=grounded(),m=active.shape;
@@ -355,6 +402,7 @@ canvas.addEventListener('lostpointercapture',()=>{touch=null});
 // Safari text magnifier, double-tap zoom, and rubber-band gestures have no place in a game.
 for(const evt of ['selectstart','contextmenu','dblclick','dragstart','gesturestart','gesturechange'])document.addEventListener(evt,e=>e.preventDefault(),{passive:false});
 document.addEventListener('keydown',e=>{
+  if(e.target instanceof HTMLInputElement)return;
   const map={ArrowLeft:'left',ArrowRight:'right',ArrowDown:'down',ArrowUp:'rotate',x:'rotate',X:'rotate',c:'hold',C:'hold',Shift:'hold',' ':'hard'};
   if(map[e.key]){e.preventDefault();if(!e.repeat||['left','right','down'].includes(map[e.key]))perform(map[e.key])}
   else if(e.key==='z'||e.key==='Z'){e.preventDefault();if(!e.repeat)rotate(-1)}
@@ -362,6 +410,127 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Enter'&&!menuOpen&&status!=='playing'&&e.target.tagName!=='BUTTON'){e.preventDefault();begin()}
 });
 $('playButton').addEventListener('click',begin);
+
+
+function setBoardStatus(message,isError=false){
+  const el=$('boardStatus');
+  el.textContent=message;
+  el.classList.toggle('error',isError);
+}
+function leaderboardError(e){
+  if(!e)return 'Could not connect to leaderboard.';
+  const msg=String(e.message||e);
+  if(/anonymous|not enabled|signup.*disabled/i.test(msg))return 'Enable Anonymous Sign-Ins in Supabase Auth settings to create your player.';
+  if(/duplicate|unique|23505/i.test(msg))return 'That name is already taken. Choose another name.';
+  if(/network|failed to fetch/i.test(msg))return 'Connection unavailable. Scores will refresh when online.';
+  return msg.slice(0,140);
+}
+async function initializeLeaderboard(){
+  if(lbClient&&lbUser)return;
+  if(lbLoading)return lbLoading;
+  lbLoading=(async()=>{
+    // The CDN library is optional to offline gameplay. The menu reports an
+    // actionable error when not yet loaded instead of affecting the game.
+    if(!window.supabase||!window.supabase.createClient)throw Error('Leaderboard library is not loaded. Connect to the internet and reopen the menu.');
+    if(!lbClient)lbClient=window.supabase.createClient(LB_URL,LB_PUBLIC_KEY,{
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'glow-stack-supabase-auth'}
+    });
+    let {data:{session},error}=await lbClient.auth.getSession();
+    if(error)throw error;
+    if(!session){
+      const sign=await lbClient.auth.signInAnonymously();
+      if(sign.error)throw sign.error;
+      session=sign.data.session;
+    }
+    lbUser=session?.user?.id;
+    if(!lbUser)throw Error('Unable to create player identity.');
+    const {data, error:profileError}=await lbClient.from('glow_stack_leaderboard')
+      .select('username,best_score').eq('user_id',lbUser).maybeSingle();
+    if(profileError)throw profileError;
+    if(data){lbUsername=data.username;lbBest=Number(data.best_score)||0;lbLastSent=lbBest}
+    $('playerNameInput').value=lbUsername;
+  })();
+  try{await lbLoading}finally{lbLoading=null}
+}
+function renderLeaderboard(){
+  const list=$('leaderboardList');
+  list.replaceChildren();
+  if(!lbRows.length){
+    const li=document.createElement('li');li.textContent='No scores yet. Claim the first spot!';list.appendChild(li);return;
+  }
+  lbRows.forEach((player,index)=>{
+    const li=document.createElement('li');
+    if(index===0)li.classList.add('first');
+    if(lbUser&&player.user_id===lbUser)li.classList.add('me');
+    const rank=document.createElement('span');rank.className='board-rank';rank.textContent=index===0?'♛':'#'+(index+1);
+    const name=document.createElement('span');name.className='board-person';name.textContent=player.username;
+    const points=document.createElement('span');points.className='board-points';points.textContent=Number(player.best_score).toLocaleString();
+    li.append(rank,name,points);list.appendChild(li);
+  });
+}
+async function fetchLeaderboard(){
+  if(!lbClient||!lbUser)return;
+  const {data,error}=await lbClient.from('glow_stack_leaderboard').select('user_id,username,best_score')
+    .order('best_score',{ascending:false}).order('username',{ascending:true}).limit(30);
+  if(error)throw error;
+  lbRows=data||[];
+  lbLastFetch=Date.now();
+  renderLeaderboard();
+  if(lbUsername)setBoardStatus('Playing as '+lbUsername+' · Rankings update automatically');
+  else setBoardStatus('Enter your name to join the rankings.');
+}
+async function openLeaderboard(){
+  try{
+    setBoardStatus('Connecting to shared leaderboard…');
+    await initializeLeaderboard();
+    if(lbOpen)await fetchLeaderboard();
+  }catch(e){setBoardStatus(leaderboardError(e),true)}
+}
+async function saveLeaderboardName(){
+  const name=$('playerNameInput').value.trim().replace(/\s+/g,' ');
+  if(!/^[A-Za-z0-9 _-]{2,18}$/.test(name)){
+    setBoardStatus('Use 2–18 letters, numbers, spaces, underscores or hyphens.',true);return;
+  }
+  $('savePlayerButton').disabled=true;
+  try{
+    setBoardStatus('Saving your player name…');
+    await initializeLeaderboard();
+    const {error}=await lbClient.from('glow_stack_leaderboard').upsert({
+      user_id:lbUser,username:name,best_score:lbBest
+    },{onConflict:'user_id'});
+    if(error)throw error;
+    lbUsername=name;
+    try{localStorage.setItem('glow-stack-player-name-v1',name)}catch(_){}
+    await fetchLeaderboard();
+  }catch(e){setBoardStatus(leaderboardError(e),true)}
+  finally{$('savePlayerButton').disabled=false}
+}
+function queueLeaderboardScore(){
+  if(lbSyncPending||!lbUsername||!lbClient||!lbUser)return;
+  lbSyncPending=true;
+  // Never transmit score changes in every animation frame. The game also
+  // retries automatically if connectivity briefly drops.
+  setTimeout(async()=>{
+    lbSyncPending=false;
+    if(!lbUsername||!lbClient||!lbUser||lbBest<=lbLastSent)return;
+    try{
+      const {data,error}=await lbClient.from('glow_stack_leaderboard')
+        .update({best_score:lbBest}).eq('user_id',lbUser).select('best_score').single();
+      if(error)throw error;
+      lbLastSent=Math.max(lbLastSent,Number(data.best_score)||0);
+      if(lbOpen)await fetchLeaderboard();
+    }catch(e){if(lbOpen)setBoardStatus(leaderboardError(e),true)}
+  },900);
+}
+async function refreshLeaderboardIfNeeded(){
+  if(!lbOpen||!lbClient||!lbUser||Date.now()-lbLastFetch<10000)return;
+  try{
+    if(lbBest>lbLastSent)queueLeaderboardScore();
+    await fetchLeaderboard();
+  }catch(e){setBoardStatus(leaderboardError(e),true)}
+}
+// Refresh online rankings while the menu is visible, across both phones.
+setInterval(()=>{void refreshLeaderboardIfNeeded()},5000);
 
 function openMenu(){
   if(menuOpen)return;
@@ -373,14 +542,17 @@ function openMenu(){
   $('menuClose').focus({preventScroll:true});
 }
 function showMenuPage(page){
-  $('menuTitle').textContent=page==='challenges'?'CHALLENGES':'OPTIONS';
+  $('menuTitle').textContent=page==='challenges'?'CHALLENGES':page==='leaderboard'?'LEADERBOARD':'OPTIONS';
   $('optionsPage').hidden=page!=='options';
   $('challengesPage').hidden=page!=='challenges';
-  $('menuBack').hidden=page!=='challenges';
+  $('leaderboardPage').hidden=page!=='leaderboard';
+  $('menuBack').hidden=page==='options';
+  lbOpen=page==='leaderboard';
+  if(lbOpen){$('playerNameInput').value=lbUsername;void openLeaderboard();}
 }
 function closeMenu(resume=true){
   if(!menuOpen)return;
-  menuOpen=false;$('menuScreen').hidden=true;
+  menuOpen=false;lbOpen=false;$('menuScreen').hidden=true;
   if(resume&&menuWasPlaying&&status==='paused')begin();
   menuWasPlaying=false;
   $('levelButton').focus({preventScroll:true});
@@ -389,6 +561,11 @@ $('levelButton').addEventListener('click',openMenu);
 $('menuClose').addEventListener('click',()=>closeMenu());
 $('menuBack').addEventListener('click',()=>showMenuPage('options'));
 $('challengesButton').addEventListener('click',()=>showMenuPage('challenges'));
+$('leaderboardButton').addEventListener('click',()=>showMenuPage('leaderboard'));
+$('savePlayerButton').addEventListener('click',()=>{void saveLeaderboardName()});
+$('playerNameInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();void saveLeaderboardName()}
+});
 $('restartButton').addEventListener('click',()=>{
   closeMenu(false);
   touch=null;fresh(level,checkpointScore,checkpointLines);begin();

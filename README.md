@@ -6,7 +6,7 @@ Glow Stack is a neon 10×20 falling-block puzzle. This version is a **full-scree
 
 - **Level / Score / Best / Next** share one compact top strip. Tap **Level** to open the pause-and-options menu.
 - The game board stretches nearly edge to edge and uses almost all remaining vertical space. Its display is slightly wider (1:1.86 rather than 1:2), but the game still contains the original 10 columns and 20 rows. There is **no bottom control strip**.
-- **Hold** is still a slim, horizontally aligned button directly underneath the board, matching its width. The held tetromino is now rendered at a much larger scale inside a wide high-resolution preview canvas, without making the button taller. You can swap once per falling piece, as before.
+- **Hold** is a little taller (57–64px depending on screen size) to use the remaining bottom space, without changing the board, game text, piece animations or gameplay. The held tetromino remains brightly visible. You can swap once per falling piece.
 - **Next** previews exactly one upcoming piece in the top row; the old right-side rail and second preview are removed.
 - Start/Resume remains a button overlay on the game board when the game has not started or is already paused.
 
@@ -24,7 +24,8 @@ Tap the **Level** stat. The current game pauses and the menu opens:
 
 1. **Restart Level** — restart the current level from its saved level checkpoint.
 2. **Restart at Level 1** — begin a new level-one run.
-3. **Challenges** — opens a deliberately empty placeholder page (with Back and X).
+3. **Leaderboard** — shared online ranking of each player's personal best, featuring a neon trophy illustration and a unique username field.
+4. **Challenges** — opens a deliberately empty placeholder page (with Back and X).
 
 Tap **X** to close the options/challenges menu and **automatically resume the game if it was playing before the menu opened**. If you were on the initial Start screen, closing the menu keeps the game ready rather than starting unexpectedly.
 
@@ -47,3 +48,25 @@ python tests/test_iphone_layout.py
 After the new `main` build deploys on GitHub Pages, fully close and reopen the Home Screen game. The saved game keys `glow-stack-save-v3` and `glow-stack-best-v3` have **not** changed. Don't clear website data or delete an existing Home Screen icon just to refresh it: that could erase locally stored scores.
 
 Device emulation is useful but does not replace testing in an installed Home Screen app on an actual iPhone.
+
+
+## Live couple leaderboard (Supabase)
+
+The leaderboard uses the existing **Wifey & Hubby** Supabase project, in its new and separate `public.glow_stack_leaderboard` table. The existing project tables are untouched. The table has Row Level Security, unique case-insensitive usernames, and a database trigger preventing a player's highest score from decreasing.
+
+**One-time dashboard setting required:** In [Wifey & Hubby → Authentication → Sign In / Providers](https://supabase.com/dashboard/project/gtcybnvjdcmuzegxwiic/auth/providers), **enable Anonymous Sign-Ins** if it is currently off. This lets each phone own an authenticated score record without requiring email/password signup. Neither a service-role key nor a secret API key is shipped in the frontend; it uses only the public publishable key.
+
+### How to start
+
+1. On each phone, open Glow Stack, tap **Level → Leaderboard**.
+2. Choose a different player name (2–18 letters/numbers/spaces/underscores/hyphens), then **Save Name**.
+3. Close the menu and play. When you earn points, the app submits that phone's **personal best** to Supabase; your rank updates online.
+4. Open Leaderboard to compare scores. While open, it refreshes every 10 seconds. Higher scores move a player ahead automatically, with alphabetical order breaking equal scores.
+
+The leaderboard tracks **one player identity per installed app/browser storage profile**. For best results, each person plays on their own phone. Anonymous identities stay on that installed app: if you delete the icon, sign out, or clear storage, the anonymous identity may be unrecoverable even though its score row remains online. Adding recovery with email/password can be done later. Username edits rename only your own player record; a name already claimed by someone else cannot be reused.
+
+The original game's local saved-game keys are unchanged and its local Best display continues to represent the previous device-local record. Online rankings are separate and cannot display while offline, but gameplay still works. Submissions queue a retry for transient offline failures. Since the game score is calculated in the public browser, this is a friendly competition rather than a tamper-proof anti-cheat leaderboard.
+
+### Test coverage
+
+Automated tests cover 11 phone sizes, menu pause/resume, Hold and restart actions, trophy page navigation, plus a mocked Supabase scenario verifying unique player creation and rank changes. An end-to-end real anonymous-auth test on both physical phones is still recommended once Anonymous Sign-Ins is enabled.

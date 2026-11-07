@@ -73,7 +73,7 @@ def run():
                     assert metrics["nextCard"]["bottom"]<=metrics["score"]["bottom"]+1,(name,"Next overflows header",metrics)
                     assert metrics["nextLabel"]["top"]>=metrics["nextCard"]["top"]+1, (name,"Next text overflows header",metrics)
                     assert metrics["next"]["bottom"]<=metrics["nextCard"]["bottom"]-1,(name,"Next block clipped by header",metrics)
-                    assert hold["height"]<=54, (name,"Hold too tall",metrics)
+                    assert hold["height"]<=65, (name,"Hold too tall",metrics)
                     assert hold["top"]>=stage["bottom"]-1,(name,"Hold collides with board",metrics)
                     assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
                     assert hold["bottom"]<=metrics["shell"]["bottom"]+1, (name,"Hold clipped offscreen",metrics)
@@ -97,6 +97,14 @@ def run():
                     page.locator("#menuClose").click()
                     assert is_hidden(page,"#menuScreen"),(name,"X did not close")
                     assert is_hidden(page,"#overlay"),(name,"X did not resume")
+                    page.locator("#levelButton").click()
+                    page.locator("#leaderboardButton").click()
+                    assert not is_hidden(page,"#leaderboardPage"),(name,"leaderboard missing")
+                    assert is_hidden(page,"#optionsPage"),(name,"options still shown")
+                    assert page.locator(".trophy-hero img").count()==1,(name,"trophy illustration missing")
+                    page.locator("#menuBack").click()
+                    page.locator("#menuClose").click()
+                    assert is_hidden(page,"#overlay"),(name,"leaderboard X did not resume")
 
                     before=page.locator("#held").evaluate("(e) => e.toDataURL()")
                     page.locator("#holdBox").click()
@@ -142,6 +150,59 @@ def run():
                     print(f"PASS {name} | board {board['width']:.0f} x {board['height']:.0f}; available {stage['height']:.0f}")
                 finally:
                     page.close()
+            # Mock the Supabase network to verify actual username and ranking UI.
+            # Live database RLS and SQL checks are verified separately.
+            mock_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                mock_page.set_content(HTML)
+                mock_page.evaluate("""() => {
+                  window.__players=[{user_id:'husband',username:'Hubby',best_score:500}];
+                  window.supabase={createClient:()=>({
+                    auth:{
+                      getSession:async()=>({data:{session:null},error:null}),
+                      signInAnonymously:async()=>({data:{session:{user:{id:'wife'}}},error:null})
+                    },
+                    from:()=>({
+                      filter:null,updated:null,
+                      select(){return this;},
+                      eq(_,value){this.filter=value;return this;},
+                      maybeSingle:async()=>({data:null,error:null}),
+                      async upsert(p){
+                        let row=window.__players.find(x=>x.user_id===p.user_id);
+                        if(row){row.username=p.username;row.best_score=Math.max(row.best_score,p.best_score)}
+                        else window.__players.push({...p});
+                        return {error:null};
+                      },
+                      update(p){this.updated=p;return this;},
+                      async single(){
+                        const row=window.__players.find(x=>x.user_id===this.filter);
+                        row.best_score=Math.max(row.best_score,this.updated.best_score);
+                        return {data:{best_score:row.best_score},error:null};
+                      },
+                      order(){return this;},
+                      async limit(){
+                        return {data:[...window.__players].sort((a,b)=>b.best_score-a.best_score),error:null};
+                      }
+                    })
+                  })}
+                }""")
+                mock_page.locator("#levelButton").click()
+                mock_page.locator("#leaderboardButton").click()
+                mock_page.locator("#playerNameInput").fill("Wifey")
+                mock_page.locator("#savePlayerButton").click()
+                mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Hubby","Wifey"],"Initial ranking failed"
+                # Simulate a higher online high score posted by this phone.
+                mock_page.evaluate("""() => {
+                  window.__players.find(x=>x.username==='Wifey').best_score=800;
+                }""")
+                mock_page.locator("#menuBack").click()
+                mock_page.locator("#leaderboardButton").click()
+                mock_page.wait_for_function("() => document.querySelector('#leaderboardList .board-person')?.textContent==='Wifey'")
+                assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Wifey","Hubby"],"High score did not change ranks"
+                print("PASS shared leaderboard mock | username registration and automatic ranking")
+            finally:
+                mock_page.close()
             assert not errors,errors
         finally:
             browser.close()
