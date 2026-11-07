@@ -103,6 +103,10 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .trophy-hero strong{display:block;color:#d8f5ff;letter-spacing:.085em;font-size:15px}
 .trophy-hero small{display:block;color:#a4c9e5;font-size:11px;line-height:1.6;margin-top:5px}
 .board-form{display:flex;flex-direction:column;gap:7px}
+.board-registration{display:grid;gap:7px}
+.board-registered{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid #377ca3;border-radius:11px;background:linear-gradient(125deg,#103751,#0d2142);padding:10px 12px}
+.board-registered small{font-size:10px;letter-spacing:.12em;font-weight:850;color:#a5d8f5}
+.board-registered strong{font-size:15px;font-weight:900;color:#e6f9ff;overflow-wrap:anywhere}
 .board-form label{font-size:11px;font-weight:800;color:#addbf8;letter-spacing:.12em;text-transform:uppercase}
 .board-inputrow{display:flex;gap:8px}
 .board-inputrow input{min-width:0;width:100%;min-height:45px;border-radius:11px;border:1px solid #498ab9;background:#071b30;color:#ebfaff;padding:10px 12px;font:700 15px system-ui;touch-action:manipulation;user-select:text;-webkit-user-select:text}
@@ -191,10 +195,16 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
           <div><strong>TETRIS CHAMPIONS</strong><small>Two phones. One leaderboard.<br>Highest score takes the crown.</small></div>
         </div>
         <div class="board-form">
-          <label for="playerNameInput">Your player name</label>
-          <div class="board-inputrow">
-            <input type="text" id="playerNameInput" maxlength="18" autocomplete="nickname" placeholder="Choose a name" pattern="[A-Za-z0-9 _-]{2,18}">
-            <button type="button" id="savePlayerButton">SAVE NAME</button>
+          <div id="playerNameSetup" class="board-registration">
+            <label for="playerNameInput">Your player name</label>
+            <div class="board-inputrow">
+              <input type="text" id="playerNameInput" maxlength="18" autocomplete="nickname" placeholder="Choose a name" pattern="[A-Za-z0-9 _-]{2,18}">
+              <button type="button" id="savePlayerButton">SAVE NAME</button>
+            </div>
+          </div>
+          <div id="savedPlayerIdentity" class="board-registered" hidden>
+            <small>REGISTERED AS</small>
+            <strong id="savedPlayerName"></strong>
           </div>
           <div id="boardStatus" class="board-status" role="status" aria-live="polite">Connecting to the leaderboard…</div>
         </div>
@@ -451,6 +461,14 @@ document.addEventListener('keydown',e=>{
 $('playButton').addEventListener('click',begin);
 
 
+function showPlayerRegistrationState(){
+  // Only a successfully saved Supabase leaderboard profile counts as registered.
+  // Reopening the menu uses the existing stored Supabase session, not a new account.
+  const registered=!!(lbUser&&lbUsername);
+  $('playerNameSetup').hidden=registered;
+  $('savedPlayerIdentity').hidden=!registered;
+  $('savedPlayerName').textContent=registered?lbUsername:'';
+}
 function setBoardStatus(message,isError=false){
   for(const id of ['boardStatus','challengeStatus']){
     const el=$(id);
@@ -518,7 +536,8 @@ async function initializeLeaderboard(createPlayer=false){
       refresh(); // Refresh the Best tile if the online record was higher
       if(lbBest>lbLastSent||level!==lbLastLevelSent)queueLeaderboardScore();
     }
-    $('playerNameInput').value=lbUsername;
+    if(lbUsername)$('playerNameInput').value=lbUsername;
+    showPlayerRegistrationState();
   })();
   try{await lbLoading}finally{lbLoading=null}
 }
@@ -573,10 +592,12 @@ async function openLeaderboard(){
     if(!lbUser){
       // An unregistered visitor can preview the leaderboard page without
       // creating an unwanted anonymous auth account.
+      showPlayerRegistrationState();
       renderLeaderboard();
       setBoardStatus('Enter a username and tap Save Name to join. No email needed.');
       return;
     }
+    showPlayerRegistrationState();
     if(lbUsername&&lbUser){
       adoptPersonalBest();
       if(lbBest>lbLastSent)queueLeaderboardScore();
@@ -593,6 +614,13 @@ async function saveLeaderboardName(){
   try{
     setBoardStatus('Saving your player name…');
     await initializeLeaderboard(true);
+    if(lbUser&&lbUsername){
+      // A returning user has already registered. Never submit another
+      // upsert or change the name through the one-time signup control.
+      showPlayerRegistrationState();
+      if(lbOpen)await fetchLeaderboard();
+      return;
+    }
     // Import the Best tile's saved record when registering a name, even if
     // the current run only has a few points.
     adoptPersonalBest();
@@ -601,6 +629,7 @@ async function saveLeaderboardName(){
     },{onConflict:'user_id'});
     if(error)throw error;
     lbUsername=name;
+    showPlayerRegistrationState();
     lbLastLevelSent=level;
     lbLastSent=Math.max(lbLastSent,lbBest);
     try{localStorage.setItem('glow-stack-player-name-v1',name)}catch(_){}
@@ -664,7 +693,10 @@ function showMenuPage(page){
   $('leaderboardPage').hidden=page!=='leaderboard';
   $('menuBack').hidden=page==='options';
   lbOpen=page==='leaderboard'||page==='challenges';
-  if(page==='leaderboard')$('playerNameInput').value=lbUsername;
+  if(page==='leaderboard'){
+    if(lbUsername)$('playerNameInput').value=lbUsername;
+    showPlayerRegistrationState();
+  }
   if(lbOpen)void openLeaderboard();
 }
 function closeMenu(resume=true){
