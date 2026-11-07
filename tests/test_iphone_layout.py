@@ -232,7 +232,7 @@ def run():
                 mock_page.locator("#savePlayerButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
                 assert is_hidden(mock_page,"#playerNameSetup"),"Sign-up form must disappear after Save Name"
-                assert is_hidden(mock_page,"#savePlayerButton"),"Save Name button must disappear after registration"
+                assert not mock_page.locator("#savePlayerButton").is_visible(),"Save Name button must disappear after registration"
                 assert not is_hidden(mock_page,"#savedPlayerIdentity"),"Registered name indicator is missing"
                 assert mock_page.locator("#savedPlayerName").inner_text()=="Wifey","Saved player name missing"
                 assert mock_page.evaluate("window.__anonymousSignIns")==1,"Saving a name should create exactly one anonymous account"
@@ -274,7 +274,7 @@ def run():
                 returning_page.evaluate("""() => {
                   window.__anonymousSignIns=0;
                   window.__upserts=0;
-                  window.__players=[{user_id:'wife',username:'Wifey',best_score:4960,current_level:7}];
+                  window.__players=[{user_id:'wife',username:'Wifey',best_score:4960,current_level:1}];
                   window.supabase={createClient:()=>({
                     auth:{
                       getSession:async()=>({data:{session:{user:{id:'wife'}}},error:null}),
@@ -283,7 +283,7 @@ def run():
                     from:()=>({
                       select(){return this;},
                       eq(){return this;},
-                      maybeSingle:async()=>({data:{username:'Wifey',best_score:4960,current_level:7},error:null}),
+                      maybeSingle:async()=>({data:{username:'Wifey',best_score:4960,current_level:1},error:null}),
                       async upsert(){window.__upserts++;return {error:null}},
                       order(){return this;},
                       async limit(){return {data:window.__players,error:null}}
