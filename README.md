@@ -4,10 +4,10 @@ Glow Stack is a neon 10×20 falling-block puzzle. This version is a **full-scree
 
 ## Main screen
 
-- **Level / Score / Best** are the only stats at the top. Tap **Level** to open a pause-and-options menu.
+- **Level / Score / Best / Next** share one compact top strip. Tap **Level** to open the pause-and-options menu.
 - The game board takes the remaining available space. There is **no bottom control strip**.
-- **Hold** is a large tap target with a live held-piece preview. You can swap once per falling piece, as before.
-- Only **Next** is shown; the second next-piece preview was removed.
+- **Hold** is a slim, horizontally aligned button directly underneath the board, matching the board's width and displaying the held-piece preview. You can swap once per falling piece, as before.
+- **Next** previews exactly one upcoming piece in the top row; the old right-side rail and second preview are removed.
 - Start/Resume remains a button overlay on the game board when the game has not started or is already paused.
 
 ## How to play without buttons
@@ -36,7 +36,7 @@ This version **removes the old iPhone-specific 64px JavaScript guard, device det
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 9 geometry configurations (including shortened viewports and simulated safe insets), tests the Level pause/resume flow, Challenges navigation, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises 9 geometry configurations (including shortened viewports and simulated safe insets), validates the enlarged board, small header, and Hold bar no taller than 58px, tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
 
 You can run locally with Python + Playwright/Chromium:
 
