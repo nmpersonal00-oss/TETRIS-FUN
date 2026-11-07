@@ -46,11 +46,9 @@ button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
   /* navigator.standalone is supported on iOS releases where CSS display-mode
      detection is unreliable. It uses the exact same clearance as above. */
   html.ios-home-screen .shell{padding-top:max(76px, env(safe-area-inset-top, 0px))}
-  /* Some freshly installed iOS Home Screen apps ALREADY start their CSS
-     viewport below the status bar. In those sessions an additional fixed
-     76px inset double-counts the Dynamic Island, leaving a huge blank strip
-     and shrinking the playable board. Preserve the 76px protection only
-     for genuinely edge-to-edge full-screen viewports. */
+  /* On installed iOS viewports where system chrome already consumes
+     screen height, drop the redundant 76px top band. This selector must
+     stay after the normal fullscreen 76px rule. */
   html.ios-viewport-already-inset .shell{padding-top:6px}
 }
 /* Compact information strip: Level opens Options, Next previews only one piece. */
@@ -235,12 +233,20 @@ function updateHomeScreenInset(){
     window.matchMedia('(display-mode: standalone)').matches;
   const ios=/iPhone|iPad|iPod/i.test(window.navigator.userAgent);
   const portrait=window.innerHeight>window.innerWidth;
-  const topAlreadyReserved=window.screen.height-window.innerHeight;
-  // A smaller delta can be the bottom home-indicator region, not the top
-  // status bar; require at least 38px and near-physical-screen geometry.
-  const alreadyInset=ios&&standalone&&portrait&&
-    topAlreadyReserved>=38&&topAlreadyReserved<=105&&
-    Math.abs(window.screen.width-window.innerWidth)<12;
+  // iOS Display Zoom, larger accessibility fonts and some installed web-app
+  // builds report a *different CSS width* for screen vs innerWidth. The old
+  // width-equality requirement caused a false negative on real devices,
+  // leaving the entire redundant 76px above the user's Level/Score bar.
+  // Compare heights instead. Use the visible viewport as well because
+  // affected WebKit releases disagree about innerHeight vs visualViewport.
+  const viewportHeight=Math.min(
+    window.innerHeight,
+    window.visualViewport?.height||window.innerHeight
+  );
+  const reservedHeight=window.screen.height-viewportHeight;
+  const plausibleInset=reservedHeight>=38&&
+    reservedHeight<=Math.max(170,window.screen.height*.23);
+  const alreadyInset=ios&&standalone&&portrait&&plausibleInset;
   document.documentElement.classList.toggle('ios-viewport-already-inset',alreadyInset);
 }
 updateHomeScreenInset();
