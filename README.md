@@ -30,7 +30,7 @@ Tap **X** to close the options/challenges menu and **automatically resume the ga
 
 ## Display behavior
 
-This version **removes the old iPhone-specific 64px guard, iPhone detection, manual sizing calibration, synthetic viewport height and button rows**. It relies on CSS `100dvh`, `viewport-fit=cover` and standard `env(safe-area-inset-*)` padding inside the page that the installed Home Screen app receives. A basic `manifest.webmanifest` declares a standalone app.
+This version **removes the old iPhone-specific 64px JavaScript guard, device detection, manual sizing calibration, synthetic viewport height and button rows**. It uses CSS `100dvh`, `viewport-fit=cover`, standard `env(safe-area-inset-*)`, and a conservative 56px top clearance **only in portrait standalone app mode**, preventing the score bar from overlapping status icons if the system reports zero top inset. The extra space stays inside the viewport: it does not stretch the game into an unexposed bottom strip. The `manifest.webmanifest` declares a standalone app.
 
 **Hardware limitation:** iOS controls the clock/status icons and may reserve a system area outside the webpage. A website cannot hide the iPhone's Dynamic Island or reclaim pixels that the installed web view does not expose, even if a native game can. The dark app background is designed to blend into the system area where supported. Older installed Home Screen icons may retain their original launch-mode settings.
 
