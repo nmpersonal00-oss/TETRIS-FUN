@@ -156,7 +156,7 @@ def run():
             try:
                 mock_page.set_content(HTML)
                 mock_page.evaluate("""() => {
-                  window.__players=[{user_id:'husband',username:'Hubby',best_score:500}];
+                  window.__players=[{user_id:'husband',username:'Hubby',best_score:500,current_level:4}];
                   window.supabase={createClient:()=>({
                     auth:{
                       getSession:async()=>({data:{session:null},error:null}),
@@ -169,7 +169,7 @@ def run():
                       maybeSingle:async()=>({data:null,error:null}),
                       async upsert(p){
                         let row=window.__players.find(x=>x.user_id===p.user_id);
-                        if(row){row.username=p.username;row.best_score=Math.max(row.best_score,p.best_score)}
+                        if(row){row.username=p.username;row.best_score=Math.max(row.best_score,p.best_score);row.current_level=p.current_level}
                         else window.__players.push({...p});
                         return {error:null};
                       },
@@ -177,7 +177,8 @@ def run():
                       async single(){
                         const row=window.__players.find(x=>x.user_id===this.filter);
                         row.best_score=Math.max(row.best_score,this.updated.best_score);
-                        return {data:{best_score:row.best_score},error:null};
+                        row.current_level=this.updated.current_level;
+                        return {data:{best_score:row.best_score,current_level:row.current_level},error:null};
                       },
                       order(){return this;},
                       async limit(){
@@ -192,15 +193,28 @@ def run():
                 mock_page.locator("#savePlayerButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
                 assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Hubby","Wifey"],"Initial ranking failed"
-                # Simulate a higher online high score posted by this phone.
+                assert mock_page.locator("#leaderboardList .board-player-level").all_inner_texts()==["LEVEL 4","LEVEL 1"],"Player levels missing from leaderboard"
+                assert mock_page.locator("#leaderboardList .board-points").all_inner_texts()==["500","0"],"Best scores missing from leaderboard"
+                # Simulate a higher online high score and a later level on the wife's phone.
                 mock_page.evaluate("""() => {
                   window.__players.find(x=>x.username==='Wifey').best_score=800;
+                  window.__players.find(x=>x.username==='Wifey').current_level=6;
                 }""")
                 mock_page.locator("#menuBack").click()
                 mock_page.locator("#leaderboardButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#leaderboardList .board-person')?.textContent==='Wifey'")
                 assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Wifey","Hubby"],"High score did not change ranks"
-                print("PASS shared leaderboard mock | username registration and automatic ranking")
+                assert mock_page.locator("#leaderboardList .board-player-level").all_inner_texts()==["LEVEL 6","LEVEL 4"],"Updated current levels not shown"
+                assert mock_page.locator("#leaderboardList .board-points").all_inner_texts()==["800","500"],"Updated best scores not shown"
+                mock_page.locator("#menuBack").click()
+                mock_page.locator("#challengesButton").click()
+                mock_page.wait_for_function("() => document.querySelector('#challengeProgressList .challenge-numbers strong')?.textContent==='LEVEL 6'")
+                assert mock_page.locator("#challengeProgressList .challenge-player").all_inner_texts()==["Wifey","Hubby"],"Challenges should compare both players"
+                assert mock_page.locator("#challengeProgressList .challenge-numbers strong").all_inner_texts()==["LEVEL 6","LEVEL 4"],"Challenges does not show current levels"
+                assert "Best 800" in mock_page.locator("#challengeProgressList").inner_text(),"Challenges should show best score"
+                mock_page.locator("#menuClose").click()
+                assert is_hidden(mock_page,"#menuScreen"),"Challenges could not close"
+                print("PASS shared leaderboard mock | no-email username setup, best scores and current levels in both views")
             finally:
                 mock_page.close()
             assert not errors,errors

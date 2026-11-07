@@ -108,7 +108,19 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .board-rank{font-weight:900;color:#7ee1ff;font-size:18px}
 .board-list .first .board-rank{color:#ffe58e}
 .board-person{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850;font-size:13px}
+.board-person-wrap{min-width:0;display:grid;gap:3px}
+.board-player-level{color:#86d9fa;font-size:11px;letter-spacing:.06em;font-weight:800}
+.board-best-wrap{display:grid;justify-items:end;gap:3px}
+.board-best-label{color:#9dbed9;font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
 .board-points{font-variant-numeric:tabular-nums;color:#e2f7ff;font-weight:900;font-size:14px}
+.challenge-heading{font-weight:900;font-size:12px;letter-spacing:.11em;color:#bae8ff;text-align:center;margin:5px 0 10px}
+.challenge-progress{list-style:none;padding:0;margin:0;display:grid;gap:9px;max-height:min(32dvh,250px);overflow:auto;touch-action:pan-y}
+.challenge-progress li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #35668a;background:linear-gradient(130deg,#123a5b,#06172b)}
+.challenge-progress li:first-child{border-color:#b4a462}
+.challenge-player{font-weight:850;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.challenge-numbers{display:grid;gap:3px;text-align:right;flex:0 0 auto;font-size:11px;color:#9dbed9}
+.challenge-numbers strong{color:#82e4ff;font-size:15px}
+.challenge-empty{display:grid;place-items:center;color:#87b4d3;font-weight:800;letter-spacing:.035em;font-size:11px;text-align:center;padding:14px}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
 </style></style>
 </head>
@@ -161,7 +173,10 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
         </div>
       </div>
       <div id="challengesPage" hidden aria-label="Challenges page">
-        <div class="challenge-empty" aria-label="Challenges area is empty"></div>
+        <div class="challenge-heading">CURRENT LEVELS</div>
+        <div id="challengeStatus" class="board-status" role="status" aria-live="polite">Loading levels…</div>
+        <ol id="challengeProgressList" class="challenge-progress" aria-label="Player level comparison"></ol>
+        <div class="challenge-empty" aria-label="Future challenges">More challenges coming soon</div>
       </div>
       <div id="leaderboardPage" class="leaderboard-page" hidden aria-label="Shared leaderboard">
         <div class="trophy-hero"><img src="./assets/neon-trophy.svg" alt="Gold and cyan neon trophy with glowing blocks">
@@ -198,7 +213,7 @@ let effect=null,particles=[],effectTime=0;
 let menuOpen=false,menuWasPlaying=false;
 const LB_URL='https://gtcybnvjdcmuzegxwiic.supabase.co';
 const LB_PUBLIC_KEY='sb_publishable_GBuQ25Z5CNBwW3iYEGLb8A_VEsxwReg';
-let lbClient=null,lbUser=null,lbUsername='',lbBest=0,lbSyncPending=false,lbLastSent=0,lbLastFetch=0,lbLoading=null,lbOpen=false;
+let lbClient=null,lbUser=null,lbUsername='',lbBest=0,lbSyncPending=false,lbSending=false,lbLastSent=0,lbLastLevelSent=1,lbLastFetch=0,lbLoading=null,lbOpen=false;
 let lbRows=[];
 
 const blank=()=>Array.from({length:H},()=>Array(W).fill(null));
@@ -216,6 +231,7 @@ function fresh(lvl=1,points=0,completedLines=(lvl-1)*10){
   level=lvl;score=points;lines=completedLines;checkpointScore=points;checkpointLines=completedLines;
   fallTime=0;lockTime=0;lockResets=0;effect=null;particles=[];status='ready';
   $('clearToast').classList.remove('show');spawn();refresh();save();
+  if(lbUsername&&lbUser)queueLeaderboardScore();
 }
 function addPoints(n){
   score=Math.min(Number.MAX_SAFE_INTEGER,score+n);
@@ -260,6 +276,7 @@ function lockPiece(){if(!active)return;
   holdUsed=false;spawn();
   if(clearedRows.length && status!=='over')status='clearing';
   save();
+  if(lbUsername&&lbUser&&level!==lbLastLevelSent)queueLeaderboardScore();
 }
 // Endless progression: beginner-friendly through level 20, faster only at advanced levels.
 function interval(lvl){return lvl<=20?1500-(lvl-1)*(680/19):Math.max(125,820*Math.pow(.965,lvl-20))}
@@ -413,9 +430,11 @@ $('playButton').addEventListener('click',begin);
 
 
 function setBoardStatus(message,isError=false){
-  const el=$('boardStatus');
-  el.textContent=message;
-  el.classList.toggle('error',isError);
+  for(const id of ['boardStatus','challengeStatus']){
+    const el=$(id);
+    el.textContent=message;
+    el.classList.toggle('error',isError);
+  }
 }
 function leaderboardError(e){
   if(!e)return 'Could not connect to leaderboard.';
@@ -445,32 +464,55 @@ async function initializeLeaderboard(){
     lbUser=session?.user?.id;
     if(!lbUser)throw Error('Unable to create player identity.');
     const {data, error:profileError}=await lbClient.from('glow_stack_leaderboard')
-      .select('username,best_score').eq('user_id',lbUser).maybeSingle();
+      .select('username,best_score,current_level').eq('user_id',lbUser).maybeSingle();
     if(profileError)throw profileError;
-    if(data){lbUsername=data.username;lbBest=Number(data.best_score)||0;lbLastSent=lbBest}
+    if(data){
+      lbUsername=data.username;
+      lbBest=Number(data.best_score)||0;
+      lbLastSent=lbBest;
+      lbLastLevelSent=Math.max(1,Number(data.current_level)||1);
+      if(level!==lbLastLevelSent)queueLeaderboardScore();
+    }
     $('playerNameInput').value=lbUsername;
   })();
   try{await lbLoading}finally{lbLoading=null}
 }
 function renderLeaderboard(){
-  const list=$('leaderboardList');
-  list.replaceChildren();
+  const list=$('leaderboardList'),challenges=$('challengeProgressList');
+  list.replaceChildren();challenges.replaceChildren();
   if(!lbRows.length){
-    const li=document.createElement('li');li.textContent='No scores yet. Claim the first spot!';list.appendChild(li);return;
+    const empty=document.createElement('li');empty.textContent='No scores yet. Choose a username to join!';list.appendChild(empty);
+    const challengeEmpty=document.createElement('li');challengeEmpty.textContent='Sign up with just a name in Leaderboard to compare levels.';challenges.appendChild(challengeEmpty);
+    return;
   }
   lbRows.forEach((player,index)=>{
+    const playerLevel=Math.max(1,Number(player.current_level)||1);
+    const bestPoints=Number(player.best_score)||0;
     const li=document.createElement('li');
     if(index===0)li.classList.add('first');
     if(lbUser&&player.user_id===lbUser)li.classList.add('me');
     const rank=document.createElement('span');rank.className='board-rank';rank.textContent=index===0?'♛':'#'+(index+1);
+    const identity=document.createElement('span');identity.className='board-person-wrap';
     const name=document.createElement('span');name.className='board-person';name.textContent=player.username;
-    const points=document.createElement('span');points.className='board-points';points.textContent=Number(player.best_score).toLocaleString();
-    li.append(rank,name,points);list.appendChild(li);
+    const levelLabel=document.createElement('span');levelLabel.className='board-player-level';levelLabel.textContent='LEVEL '+playerLevel.toLocaleString();
+    identity.append(name,levelLabel);
+    const bestWrap=document.createElement('span');bestWrap.className='board-best-wrap';
+    const bestLabel=document.createElement('span');bestLabel.className='board-best-label';bestLabel.textContent='BEST SCORE';
+    const points=document.createElement('span');points.className='board-points';points.textContent=bestPoints.toLocaleString();
+    bestWrap.append(bestLabel,points);
+    li.append(rank,identity,bestWrap);list.appendChild(li);
+    const challengeRow=document.createElement('li');
+    const challengeName=document.createElement('span');challengeName.className='challenge-player';challengeName.textContent=player.username;
+    const challengeNumbers=document.createElement('span');challengeNumbers.className='challenge-numbers';
+    const current=document.createElement('strong');current.textContent='LEVEL '+playerLevel.toLocaleString();
+    const best=document.createElement('span');best.textContent='Best '+bestPoints.toLocaleString();
+    challengeNumbers.append(current,best);
+    challengeRow.append(challengeName,challengeNumbers);challenges.appendChild(challengeRow);
   });
 }
 async function fetchLeaderboard(){
   if(!lbClient||!lbUser)return;
-  const {data,error}=await lbClient.from('glow_stack_leaderboard').select('user_id,username,best_score')
+  const {data,error}=await lbClient.from('glow_stack_leaderboard').select('user_id,username,best_score,current_level')
     .order('best_score',{ascending:false}).order('username',{ascending:true}).limit(30);
   if(error)throw error;
   lbRows=data||[];
@@ -496,10 +538,12 @@ async function saveLeaderboardName(){
     setBoardStatus('Saving your player name…');
     await initializeLeaderboard();
     const {error}=await lbClient.from('glow_stack_leaderboard').upsert({
-      user_id:lbUser,username:name,best_score:lbBest
+      user_id:lbUser,username:name,best_score:lbBest,current_level:level
     },{onConflict:'user_id'});
     if(error)throw error;
     lbUsername=name;
+    lbLastLevelSent=level;
+    lbLastSent=Math.max(lbLastSent,lbBest);
     try{localStorage.setItem('glow-stack-player-name-v1',name)}catch(_){}
     await fetchLeaderboard();
   }catch(e){setBoardStatus(leaderboardError(e),true)}
@@ -508,24 +552,36 @@ async function saveLeaderboardName(){
 function queueLeaderboardScore(){
   if(lbSyncPending||!lbUsername||!lbClient||!lbUser)return;
   lbSyncPending=true;
-  // Never transmit score changes in every animation frame. The game also
-  // retries automatically if connectivity briefly drops.
+  // Coalesce rapid score and level changes. One request at a time prevents an
+  // older level update arriving after a newer one and overwriting the record.
   setTimeout(async()=>{
     lbSyncPending=false;
-    if(!lbUsername||!lbClient||!lbUser||lbBest<=lbLastSent)return;
+    if(!lbUsername||!lbClient||!lbUser)return;
+    if(lbSending){queueLeaderboardScore();return}
+    const scoreToSend=lbBest,levelToSend=level;
+    if(scoreToSend<=lbLastSent&&levelToSend===lbLastLevelSent)return;
+    lbSending=true;let succeeded=false;
     try{
       const {data,error}=await lbClient.from('glow_stack_leaderboard')
-        .update({best_score:lbBest}).eq('user_id',lbUser).select('best_score').single();
+        .update({best_score:scoreToSend,current_level:levelToSend})
+        .eq('user_id',lbUser).select('best_score,current_level').single();
       if(error)throw error;
       lbLastSent=Math.max(lbLastSent,Number(data.best_score)||0);
+      lbLastLevelSent=Math.max(1,Number(data.current_level)||levelToSend);
+      succeeded=true;
       if(lbOpen)await fetchLeaderboard();
     }catch(e){if(lbOpen)setBoardStatus(leaderboardError(e),true)}
+    finally{
+      lbSending=false;
+      if(succeeded&&(lbBest>lbLastSent||level!==lbLastLevelSent))queueLeaderboardScore();
+    }
   },900);
 }
+window.addEventListener('online',()=>queueLeaderboardScore());
 async function refreshLeaderboardIfNeeded(){
   if(!lbOpen||!lbClient||!lbUser||Date.now()-lbLastFetch<10000)return;
   try{
-    if(lbBest>lbLastSent)queueLeaderboardScore();
+    if(lbBest>lbLastSent||level!==lbLastLevelSent)queueLeaderboardScore();
     await fetchLeaderboard();
   }catch(e){setBoardStatus(leaderboardError(e),true)}
 }
@@ -547,8 +603,9 @@ function showMenuPage(page){
   $('challengesPage').hidden=page!=='challenges';
   $('leaderboardPage').hidden=page!=='leaderboard';
   $('menuBack').hidden=page==='options';
-  lbOpen=page==='leaderboard';
-  if(lbOpen){$('playerNameInput').value=lbUsername;void openLeaderboard();}
+  lbOpen=page==='leaderboard'||page==='challenges';
+  if(page==='leaderboard')$('playerNameInput').value=lbUsername;
+  if(lbOpen)void openLeaderboard();
 }
 function closeMenu(resume=true){
   if(!menuOpen)return;
