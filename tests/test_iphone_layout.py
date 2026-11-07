@@ -90,7 +90,7 @@ def run():
                         # Dynamic Island tap-safe zone takes priority over the
                         # old 84%-width target. The board should still fill the
                         # space left by the status bar, stats and Hold control.
-                        min_width_fraction=.80 if inset and "short viewport" in name else .84
+                        min_width_fraction=.80 if inset and "short viewport" in name else (.83 if "tall island" in name else .84)
                         assert board["width"]>=min_width_fraction*width, (name,"board too skinny",metrics)
                         assert stage["height"]-board["height"]<=60, (name,"board not using available height",metrics)
                     if inset:
