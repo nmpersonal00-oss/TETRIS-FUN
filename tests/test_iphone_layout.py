@@ -189,6 +189,7 @@ def run():
                 }""")
                 mock_page.locator("#levelButton").click()
                 mock_page.locator("#leaderboardButton").click()
+                assert mock_page.locator(".trophy-hero strong").inner_text()=="TETRIS CHAMPIONS","Leaderboard title incorrect"
                 mock_page.locator("#playerNameInput").fill("Wifey")
                 mock_page.locator("#savePlayerButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
@@ -217,6 +218,31 @@ def run():
                 print("PASS shared leaderboard mock | no-email username setup, best scores and current levels in both views")
             finally:
                 mock_page.close()
+            # The owner must enable this in the Supabase Dashboard. If it's off,
+            # the app must report a clear one-time setup step and retain the typed name.
+            disabled_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                disabled_page.set_content(HTML)
+                disabled_page.evaluate("""() => {
+                  window.supabase={createClient:()=>({
+                    auth:{
+                      getSession:async()=>({data:{session:null},error:null}),
+                      signInAnonymously:async()=>({data:{session:null},error:{message:'Anonymous sign-ins are disabled'}})
+                    }
+                  })}
+                }""")
+                disabled_page.locator("#levelButton").click()
+                disabled_page.locator("#leaderboardButton").click()
+                disabled_page.locator("#playerNameInput").fill("Wifey")
+                disabled_page.locator("#savePlayerButton").click()
+                disabled_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('One-time setup needed')")
+                status=disabled_page.locator("#boardStatus").inner_text()
+                assert "Authentication" in status and "Providers" in status, status
+                assert "No email or password needed" in status, status
+                assert disabled_page.locator("#playerNameInput").input_value()=="Wifey","Name lost after error"
+                print("PASS anonymous provider disabled | actionable setup message, name retained")
+            finally:
+                disabled_page.close()
             assert not errors,errors
         finally:
             browser.close()

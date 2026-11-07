@@ -180,7 +180,7 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
       </div>
       <div id="leaderboardPage" class="leaderboard-page" hidden aria-label="Shared leaderboard">
         <div class="trophy-hero"><img src="./assets/neon-trophy.svg" alt="Gold and cyan neon trophy with glowing blocks">
-          <div><strong>NEON CHAMPIONS</strong><small>Two phones. One leaderboard.<br>Highest score takes the crown.</small></div>
+          <div><strong>TETRIS CHAMPIONS</strong><small>Two phones. One leaderboard.<br>Highest score takes the crown.</small></div>
         </div>
         <div class="board-form">
           <label for="playerNameInput">Your player name</label>
@@ -439,7 +439,7 @@ function setBoardStatus(message,isError=false){
 function leaderboardError(e){
   if(!e)return 'Could not connect to leaderboard.';
   const msg=String(e.message||e);
-  if(/anonymous|not enabled|signup.*disabled/i.test(msg))return 'Enable Anonymous Sign-Ins in Supabase Auth settings to create your player.';
+  if(/anonymous|not enabled|signup.*disabled/i.test(msg))return 'One-time setup needed: enable Anonymous Sign-Ins in Wifey & Hubby → Supabase Authentication → Providers, then tap Save Name again. No email or password needed.';
   if(/duplicate|unique|23505/i.test(msg))return 'That name is already taken. Choose another name.';
   if(/network|failed to fetch/i.test(msg))return 'Connection unavailable. Scores will refresh when online.';
   return msg.slice(0,140);
