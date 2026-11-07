@@ -351,7 +351,7 @@ function fresh(lvl=1,points=0,completedLines=(lvl-1)*10,elapsedMs=0){
 // record, not only the current run (which may be much lower).
 function adoptPersonalBest(onlineScore=0){
   const safeOnline=Number.isSafeInteger(Number(onlineScore))?Math.max(0,Number(onlineScore)):0;
-  lbBest=Math.max(lbBest,best,score,safeOnline);
+  lbBest=Math.max(lbBest,best,mode==='marathon'?score:0,safeOnline);
   if(lbBest>best){
     best=lbBest;
     try{localStorage.setItem(BEST,String(best))}catch(_){}
@@ -499,7 +499,7 @@ function load(){try{
   if(mode==='marathon'&&!data){for(const k of OLD_SAVES){data=JSON.parse(localStorage.getItem(k)||'null');if(data){migrated=true;break}}}
   if(!data||!Array.isArray(data.board)||data.board.length!==H||!data.board.every(r=>Array.isArray(r)&&r.length===W&&r.every(v=>v===null||validName(v)))||!data.active||!validName(data.active.name))return false;
   board=data.board;active=data.active;
-  if(!Array.isArray(active.shape)||active.shape.length<1||active.shape.length>4||!active.shape.every(r=>Array.isArray(r)&&r.length>=1&&r.length<=4&&r.every(v=>v===0||v===1))||!Number.isInteger(active.x)||!Number.isInteger(active.y)||collide(active.shape,active.x,active.y))return false;
+  if(!Array.isArray(active.shape)||active.shape.length<1||active.shape.length>4||!active.shape.every(r=>Array.isArray(r)&&r.length>=1&&r.length<=4&&r.every(v=>v===0||v===1))||!Number.isInteger(active.x)||!Number.isInteger(active.y)||(data.status!=='won'&&collide(active.shape,active.x,active.y)))return false;
   queue=Array.isArray(data.queue)?data.queue.filter(validName):validName(data.nextName)?[data.nextName]:[];
   bag=Array.isArray(data.bag)?data.bag.filter(validName):[];fillQueue();held=validName(data.held)?data.held:null;holdUsed=data.holdUsed===true;
   score=Number.isFinite(Number(data.score))?Math.max(0,Number(data.score)):0;
@@ -761,7 +761,7 @@ function queueLeaderboardScore(){
   // older level update arriving after a newer one and overwriting the record.
   setTimeout(async()=>{
     lbSyncPending=false;
-    if(!lbUsername||!lbClient||!lbUser)return;
+    if(isChallenge()||!lbUsername||!lbClient||!lbUser)return;
     if(lbSending){queueLeaderboardScore();return}
     const scoreToSend=lbBest,levelToSend=level;
     if(scoreToSend<=lbLastSent&&levelToSend===lbLastLevelSent)return;
