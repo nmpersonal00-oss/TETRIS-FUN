@@ -29,13 +29,25 @@ CASES = [
 def is_hidden(page, selector):
     return page.locator(selector).evaluate("(e) => e.hidden")
 
+def isolated_page(browser, **kwargs):
+    """Never allow UI tests to reach live Supabase or other network APIs.
+
+    Earlier viewport tests opened Leaderboard on many simulated phones, which
+    unintentionally made anonymous sign-in calls against the production
+    Supabase project. Every browser page now blocks outbound network requests
+    before app HTML loads; mock tests supply fake Supabase APIs explicitly.
+    """
+    page = browser.new_page(**kwargs)
+    page.route("**/*", lambda route: route.abort())
+    return page
+
 def run():
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         errors = []
         try:
             for name, width, height, inset in CASES:
-                page = browser.new_page(
+                page = isolated_page(browser,
                     viewport={"width": width, "height": height},
                     is_mobile=True, has_touch=True, user_agent=UA,
                 )
@@ -169,7 +181,7 @@ def run():
                     page.close()
             # Mock the Supabase network to verify actual username and ranking UI.
             # Live database RLS and SQL checks are verified separately.
-            mock_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            mock_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
                 mock_page.set_content(HTML)
                 mock_page.evaluate("""() => {
@@ -237,7 +249,7 @@ def run():
                 mock_page.close()
             # The owner must enable this in the Supabase Dashboard. If it's off,
             # the app must report a clear one-time setup step and retain the typed name.
-            disabled_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            disabled_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
                 disabled_page.set_content(HTML)
                 disabled_page.evaluate("""() => {
@@ -261,7 +273,7 @@ def run():
             finally:
                 disabled_page.close()
             # CAPTCHA-required errors must not be mistaken for a disabled provider.
-            captcha_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            captcha_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
                 captcha_page.set_content(HTML)
                 captcha_page.evaluate("""() => {
@@ -292,7 +304,7 @@ def run():
                 "if(!load())fresh();best=Math.max(best,4960);refresh();fit();requestAnimationFrame(frame);"
             )
             assert existing_best_html!=HTML,"Could not construct prior-best regression"
-            new_player=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            new_player=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
                 new_player.set_content(existing_best_html)
                 new_player.evaluate("""() => {
@@ -330,7 +342,7 @@ def run():
             # Existing Supabase player with ONLINE best 120 and LOCAL best 4,960:
             # the game must upload 4,960, never overwrite it with 120, and
             # maintain the correct Best tile and level after a new game.
-            old_player=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            old_player=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
                 old_player.set_content(existing_best_html)
                 old_player.evaluate("""() => {
