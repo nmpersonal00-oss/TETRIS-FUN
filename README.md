@@ -11,7 +11,7 @@ The owner-supplied pink/purple glowing block-and-star image is used as the app i
 ## Main screen
 
 - **Level / Score / Best / Next** share one compact top strip. Tap **Level** to open the pause-and-options menu.
-- The game board stretches nearly edge to edge and uses almost all remaining vertical space. Its display is slightly wider (1:1.86 rather than 1:2), but the game still contains the original 10 columns and 20 rows. There is **no bottom control strip**.
+- The game board stays at the original **10×20, 1:2 canvas ratio**, so the blocks remain square. It fits the available phone height and is capped at roughly **86% of the usable width** rather than zooming in edge to edge. There is **no bottom control strip**.
 - **Hold** is a little taller (57–64px depending on screen size) to use the remaining bottom space, without changing the board, game text, piece animations or gameplay. The held tetromino remains brightly visible. You can swap once per falling piece.
 - **Next** previews exactly one upcoming piece in the top row; the old right-side rail and second preview are removed.
 - Start/Resume remains a button overlay on the game board when the game has not started or is already paused.
@@ -37,15 +37,17 @@ Tap **X** to close the options/challenges menu and **automatically resume the ga
 
 ## Display behavior
 
-The layout uses CSS `100dvh` and `viewport-fit=cover`, without changing the board's 1:1.86 presentation ratio or game controls. **The top strip honors `env(safe-area-inset-top)` in browser mode**. Installed iOS Home Screen web apps can render in one of two layouts: (1) edge-to-edge, requiring the established **76px status bar / Dynamic Island clearance**; or (2) a viewport already shortened by approximately 44–62px after reinstalling the app, where applying that 76px *again* produces a huge empty top gap and squishes the board. The game detects the second situation using the standalone flag and screen-versus-viewport geometry, and applies only 6px *inside the already inset viewport*. The detector accounts for iPhone Display Zoom and accessibility layouts, where `screen.width` and `innerWidth` can differ: the previous width-equality gate missed this case and left the entire 76px empty band visible. This restores the board's height without putting controls under the island. In this pre-inset mode, the board is also capped to about **86% of the usable phone width**, matching the balanced original layout: correcting the top spacing previously let the height-driven canvas grow almost edge-to-edge and appear oversized. The horizontal and bottom padding remains only 3px.
+The app uses CSS `100dvh`, `viewport-fit=cover`, and the browser-provided `env(safe-area-inset-*)` values to position the score strip, game, and Hold button within the usable screen. It **does not add a 76px top band to every installed app**. In particular, standalone Samsung/Android apps receive no iPhone-specific padding.
 
-The `manifest.webmanifest` continues to declare a standalone app. This slightly reduces available board height on some iPhones to keep all four top controls visible and tappable. **Do not remove the top clearance**: that was the cause of the hidden/unusable top controls reported on a second iPhone.
+Some iOS Home Screen versions expose the full physical screen but omit a useful top safe-area inset. A fallback protects the clock/Dynamic Island in that specific iOS full-bleed case. If iOS has already reduced the page viewport for system chrome, that fallback is not applied, avoiding double padding and an oversized gap above the game.
 
-**Hardware limitation:** iOS controls the clock/status icons and may reserve a system area outside the webpage. A website cannot hide the iPhone's Dynamic Island or reclaim pixels that the installed web view does not expose, even if a native game can. The dark app background is designed to blend into the system area where supported. Older installed Home Screen icons may retain their original launch-mode settings.
+The 300×600 canvas is displayed at its native 1:2 ratio, keeping each of the 10×20 cells square. Its rendered size is limited by both available width (86%) and height, and it automatically refits after orientation and viewport changes. The Hold button remains aligned to the board. Side and bottom padding respect device safe areas, including the iPhone Home indicator.
+
+**Hardware limitation:** iOS controls the clock/status icons and can reserve space outside the webpage; the game cannot reclaim those pixels. This change does not require reinstalling the Home Screen app or clearing saved game data.
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, plus a freshly installed Home Screen app with a 62px already-excluded status bar, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. **All Playwright pages block outbound network requests** and Supabase functionality is simulated with local mocks; running automated tests never creates production anonymous accounts or touches the live Supabase tables. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises iPhone 15/16, Pro Max, compact phones, Samsung devices, installed-app mode, landscape, shortened viewports, iOS pre-inset/full-bleed modes, and dynamic viewport resize. It validates square cells, board/hold alignment, safe-area handling, menus, gestures, and leaderboard mocks. **All Playwright pages block outbound network requests**; tests do not create production anonymous accounts or modify Supabase data. GitHub Actions uploads screenshots for visual inspection.
 
 You can run locally with Python + Playwright/Chromium:
 
@@ -81,4 +83,4 @@ Online rankings cannot display while offline, but gameplay still works. Submissi
 
 ### Test coverage
 
-Automated tests cover 15 phone sizes and top-inset scenarios, menu pause/resume, Hold and restart actions, trophy page navigation, and mocked Supabase scenarios verifying password-free registration, old local Best import on first username save, a 120-point online record increasing to the previous 4,960 local record, survival of restarts, best-score ranking, current levels and Challenges. An end-to-end real anonymous-auth test on both physical phones is still recommended once Anonymous Sign-Ins is enabled.
+Automated tests cover a range of iPhone and Samsung screen sizes and safe-area scenarios, menu pause/resume, Hold and restart actions, trophy page navigation, and mocked Supabase scenarios verifying password-free registration, old local Best import on first username save, a 120-point online record increasing to the previous 4,960 local record, survival of restarts, best-score ranking, current levels and Challenges. An end-to-end real anonymous-auth test on both physical phones is still recommended once Anonymous Sign-Ins is enabled.
