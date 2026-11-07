@@ -481,9 +481,12 @@ function leaderboardError(e){
   // rather than claiming the user needs to enable a provider.
   return 'Supabase: '+msg.slice(0,190)+(code?' ['+code.slice(0,45)+']':'');
 }
-async function initializeLeaderboard(){
+async function initializeLeaderboard(createPlayer=false){
   if(lbClient&&lbUser)return;
-  if(lbLoading)return lbLoading;
+  if(lbLoading){
+    await lbLoading;
+    if(lbUser||!createPlayer)return;
+  }
   lbLoading=(async()=>{
     // The CDN library is optional to offline gameplay. The menu reports an
     // actionable error when not yet loaded instead of affecting the game.
@@ -494,6 +497,9 @@ async function initializeLeaderboard(){
     let {data:{session},error}=await lbClient.auth.getSession();
     if(error)throw error;
     if(!session){
+      // Only tap Save Name can create a Supabase identity. Opening a menu,
+      // exploring rankings or opening Challenges must never add accounts.
+      if(!createPlayer)return;
       const sign=await lbClient.auth.signInAnonymously();
       if(sign.error)throw sign.error;
       session=sign.data.session;
@@ -562,8 +568,15 @@ async function fetchLeaderboard(){
 }
 async function openLeaderboard(){
   try{
-    setBoardStatus('Connecting to shared leaderboard…');
-    await initializeLeaderboard();
+    setBoardStatus('Checking your saved player…');
+    await initializeLeaderboard(false);
+    if(!lbUser){
+      // An unregistered visitor can preview the leaderboard page without
+      // creating an unwanted anonymous auth account.
+      renderLeaderboard();
+      setBoardStatus('Enter a username and tap Save Name to join. No email needed.');
+      return;
+    }
     if(lbUsername&&lbUser){
       adoptPersonalBest();
       if(lbBest>lbLastSent)queueLeaderboardScore();
@@ -579,7 +592,7 @@ async function saveLeaderboardName(){
   $('savePlayerButton').disabled=true;
   try{
     setBoardStatus('Saving your player name…');
-    await initializeLeaderboard();
+    await initializeLeaderboard(true);
     // Import the Best tile's saved record when registering a name, even if
     // the current run only has a few points.
     adoptPersonalBest();
