@@ -69,7 +69,7 @@ The leaderboard uses the existing **Wifey & Hubby** Supabase project, in its new
 ### How to start
 
 1. On each phone, open Glow Stack, tap **Level → Leaderboard**.
-2. Choose a different player name (2–18 letters/numbers/spaces/underscores/hyphens) and press **Save Name**. **No email address or password is required:** Supabase creates a fresh anonymous identity **only when you tap Save Name**. Merely opening Leaderboard or Challenges does not create an account. Anonymous Sign-Ins must remain enabled in Supabase.
+2. Choose a different player name (2–18 letters/numbers/spaces/underscores/hyphens) and press **Save Name**. **No email address or password is required:** Supabase creates a fresh anonymous identity **only when you tap Save Name**. After successfully saving, **the username form and Save Name button disappear** and the game shows **REGISTERED AS: YourName**. Opening Leaderboard or Challenges later reuses the saved identity instead of creating a second account. Anonymous Sign-Ins must remain enabled in Supabase.
 3. Close the menu and play. As you earn points or advance levels, the app submits your **personal best score** and **current level** to Supabase. The best score never decreases, even after a new run; your current level *does* reset if you restart at Level 1.
 4. Open **Leaderboard** to see first and second place ranked by best score, plus both players' levels. Open **Challenges** to compare those same levels and best scores (challenge activities are coming later). While either page is open, online data refreshes approximately every 10 seconds. Higher best scores move a player ahead automatically, with alphabetical order breaking equal scores.
 
