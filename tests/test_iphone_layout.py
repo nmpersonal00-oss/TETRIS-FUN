@@ -180,54 +180,36 @@ def run():
                     print(f"PASS {name} | board {board['width']:.0f} x {board['height']:.0f}; available {stage['height']:.0f}")
                 finally:
                     page.close()
-            # Freshly installed iOS Home Screen apps may ALREADY have a 62px
-            # status bar excluded from innerHeight. The old fixed 76px
-            # clearance doubled the gap and compressed the board. Make this
-            # geometry explicit instead of simulating only full-bleed phones.
-            for label,width,height,screen_width,screen_height,expected_delta in [
-                ("normal device",440,894,440,956,62),
-                # Reproduces why the previous detector missed real iPhones:
-                # screen.width and innerWidth differ under Display Zoom.
-                ("Display Zoom width mismatch",393,852,430,932,80),
-                # Some iOS installations exclude more than the old
-                # hard-coded 105px ceiling. The extra top blank gap must
-                # be removed in that configuration too.
-                ("large status bar exclusion",393,820,430,956,136),
+            # iOS viewports can ALREADY exclude the clock/status bar.
+            # Do not add a second inset, including with Display Zoom.
+            for label,width,height,screen_width,screen_height in [
+                ("normal device",440,894,440,956),
+                ("Display Zoom width mismatch",393,852,430,932),
+                ("large status bar exclusion",393,820,430,956),
             ]:
                 already_inset=isolated_page(browser,
                     viewport={"width":width,"height":height},
                     screen={"width":screen_width,"height":screen_height},
                     is_mobile=True,has_touch=True,user_agent=UA)
                 try:
-                    standalone_html=HTML.replace(
-                        "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');",
-                        "Object.defineProperty(window.navigator,'standalone',{configurable:true,value:true});"
-                        "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');"
-                    )
-                    assert standalone_html!=HTML,"Could not emulate installed iOS app"
-                    already_inset.set_content(standalone_html)
-                    already_inset.wait_for_function(
-                        "() => document.documentElement.classList.contains('ios-viewport-already-inset')"
-                    )
+                    already_inset.set_content(installed_html)
+                    already_inset.wait_for_function("() => document.querySelector('.board-panel').getBoundingClientRect().height>100")
                     dims=already_inset.evaluate("""() => ({
-                        actualDelta:screen.height-innerHeight,
+                        fallback:document.documentElement.classList.contains('ios-full-bleed'),
                         paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
                         top:document.querySelector('.scorebar').getBoundingClientRect().top,
-                        boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
                         boardW:document.querySelector('.board-panel').getBoundingClientRect().width,
-                        stageW:document.querySelector('.stage').getBoundingClientRect().width,
-                        holdW:document.querySelector('.hold-bar').getBoundingClientRect().width,
-                        rootClass:document.documentElement.className
+                        boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
+                        canvasW:document.querySelector('#board').getBoundingClientRect().width,
+                        canvasH:document.querySelector('#board').getBoundingClientRect().height,
+                        holdW:document.querySelector('.hold-bar').getBoundingClientRect().width
                     })""")
-                    assert dims["actualDelta"]==expected_delta,(label,"Invalid simulated screen geometry",dims)
-                    assert dims["paddingTop"]<=8,(label,"Redundant 76px status-bar gap still applied",dims)
-                    assert 4<=dims["top"]<=12,(label,"Stats still pushed below the cleared status bar",dims)
-                    assert dims["boardH"]>490,(label,"Board remains squished",dims)
-                    if width>=360:
-                        ratio=dims["boardW"]/dims["stageW"]
-                        assert .845<=ratio<=.865,(label,"Board expanded to nearly full screen again",dims)
-                        assert abs(dims["boardW"]-dims["holdW"])<3,(label,"Hold and board should share original balanced width",dims)
-                        assert dims["boardH"]<=dims["boardW"]*1.87,(label,"Board aspect ratio distorted",dims)
+                    assert not dims["fallback"],(label,"Incorrectly treated pre-inset iPhone as full-bleed",dims)
+                    assert dims["paddingTop"]<=8,(label,"Double status-bar padding",dims)
+                    assert dims["top"]<=12,(label,"Large top gap",dims)
+                    assert abs(dims["canvasH"]-2*dims["canvasW"])<1.5,(label,"Stretched grid",dims)
+                    assert dims["boardH"]<=2*dims["boardW"],(label,"Panel height distorted",dims)
+                    assert abs(dims["boardW"]-dims["holdW"])<3,(label,"Hold not aligned",dims)
                     if label=="normal device":
                         (ROOT / "screenshots").mkdir(exist_ok=True)
                         already_inset.screenshot(path=str(ROOT/"screenshots"/"iphone_reinstalled_balanced_board.png"),full_page=True)
@@ -235,26 +217,56 @@ def run():
                     assert not is_hidden(already_inset,"#menuScreen"),(label,"Top menu button untappable")
                     already_inset.locator("#menuClose").click()
                     assert is_hidden(already_inset,"#menuScreen"),(label,"Menu stuck")
-                    print(f"PASS reinstalled iPhone with {label} | top gap {dims['paddingTop']}px instead of 76px")
+                    print(f"PASS pre-inset iPhone {label} | {dims['paddingTop']}px padding")
                 finally:
                     already_inset.close()
-            # Full-bleed installed iPhones still NEED the original 76px
-            # Dynamic Island clearance to keep husband's top buttons tappable.
+
+            # Edge-to-edge iOS Home Screen mode gets a narrow fallback only
+            # when WebKit has not already inset the viewport.
             full_bleed=isolated_page(browser,viewport={"width":440,"height":956},
                 screen={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
-                full_bleed.set_content(standalone_html)
-                full_bleed.wait_for_function("() => document.querySelector('.shell')")
-                full_bleed.wait_for_timeout(40)
+                full_bleed.set_content(installed_html)
+                full_bleed.wait_for_function("() => document.documentElement.classList.contains('ios-full-bleed')")
                 dims=full_bleed.evaluate("""() => ({
-                    inset:document.documentElement.classList.contains('ios-viewport-already-inset'),
-                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop)
+                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
+                    canvasW:document.querySelector('#board').getBoundingClientRect().width,
+                    canvasH:document.querySelector('#board').getBoundingClientRect().height
                 })""")
-                assert not dims["inset"],("Full-bleed mode wrongly classified as pre-inset",dims)
-                assert dims["paddingTop"]>=76,("Dynamic Island protection lost on full-bleed iPhone",dims)
-                print("PASS full-bleed iPhone | original 76px Dynamic Island protection remains")
+                assert 60<=dims["paddingTop"]<=64,("Missing iOS full-bleed clock clearance",dims)
+                assert abs(dims["canvasH"]-2*dims["canvasW"])<1.5,("Grid stretched in full-bleed mode",dims)
+
+                full_bleed.set_viewport_size({"width":440,"height":820})
+                full_bleed.wait_for_function("() => !document.documentElement.classList.contains('ios-full-bleed')")
+                full_bleed.wait_for_timeout(120)
+                resized=full_bleed.evaluate("""() => ({
+                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
+                    stageH:document.querySelector('.stage').getBoundingClientRect().height,
+                    boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
+                    canvasW:document.querySelector('#board').getBoundingClientRect().width,
+                    canvasH:document.querySelector('#board').getBoundingClientRect().height
+                })""")
+                assert resized["paddingTop"]<=8,("Extra top gap after resize",resized)
+                assert resized["boardH"]<=resized["stageH"]+1,("Board clipped after resize",resized)
+                assert abs(resized["canvasH"]-2*resized["canvasW"])<1.5,("Grid distorted after resize",resized)
+                print("PASS full-bleed iPhone fallback and viewport resize")
             finally:
                 full_bleed.close()
+
+            # Android PWAs must not inherit iPhone-specific padding.
+            android=isolated_page(browser,viewport={"width":412,"height":915},
+                screen={"width":412,"height":915},is_mobile=True,has_touch=True,user_agent=ANDROID_UA)
+            try:
+                android.set_content(installed_html)
+                android.wait_for_timeout(80)
+                dims=android.evaluate("""() => ({
+                    fallback:document.documentElement.classList.contains('ios-full-bleed'),
+                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop)
+                })""")
+                assert not dims["fallback"] and dims["paddingTop"]<=8,("Android got iPhone top gap",dims)
+                print("PASS Samsung standalone | no iOS top padding")
+            finally:
+                android.close()
             # Mock the Supabase network to verify actual username and ranking UI.
             # Live database RLS and SQL checks are verified separately.
             mock_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
