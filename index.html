@@ -54,7 +54,9 @@ button.stat:active{background:#20517d;transform:scale(.987)}
 .preview-card{min-width:0;min-height:0;border-radius:11px;border:1px solid rgba(86,165,228,.7);background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 14px rgba(21,116,209,.13)}
 button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 14px rgba(55,169,244,.2)}
 button.preview-card:active{background:#164d77;transform:scale(.985)}
-.preview-card.unavailable{opacity:.55}
+.hold-box.unavailable{border-color:rgba(86,165,228,.53)}
+.hold-box.unavailable .preview-subtitle{color:#7aadd0}
+/* Keep the held tetromino at full opacity even when the swap is on cooldown. */
 .preview-label{display:block;text-align:center;font-size:clamp(8px,2vw,10px);color:#b1dcf6;text-transform:uppercase;font-weight:850;letter-spacing:.1em;line-height:1.1}
 .preview-subtitle{font-size:clamp(8px,2vw,10px);font-weight:750;color:#8ab9d9;letter-spacing:.04em;text-align:center;line-height:1.1}
 .next-top{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;height:100%;padding:3px 2px;overflow:hidden}
@@ -219,6 +221,7 @@ function pause(){if(menuOpen)closeMenu();else openMenu()}
 function refresh(){
   $('level').textContent=level.toLocaleString();$('score').textContent=score.toLocaleString();$('best').textContent=best.toLocaleString();
   $('holdBox').classList.toggle('unavailable',holdUsed);
+  $('holdBox').querySelector('.preview-subtitle').textContent=holdUsed?'WAIT FOR NEXT':'TAP TO SWAP';
   $('holdBox').setAttribute('aria-disabled',String(holdUsed||status!=='playing'));
   $('overlay').hidden=status==='playing'||status==='clearing';
   $('overlayTitle').hidden=status==='ready';
