@@ -224,11 +224,17 @@ def run():
                 mock_page.locator("#leaderboardButton").click()
                 assert mock_page.locator(".trophy-hero strong").inner_text()=="TETRIS CHAMPIONS","Leaderboard title incorrect"
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('tap Save Name')")
+                assert not is_hidden(mock_page,"#playerNameSetup"),"New players must see one-time signup"
+                assert is_hidden(mock_page,"#savedPlayerIdentity"),"Unregistered player must not see a saved name"
                 assert mock_page.evaluate("window.__anonymousSignIns")==0,"Opening Leaderboard created an unwanted anonymous account"
                 assert mock_page.locator("#leaderboardList .board-person").count()==0,"New player should have no registered identity"
                 mock_page.locator("#playerNameInput").fill("Wifey")
                 mock_page.locator("#savePlayerButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                assert is_hidden(mock_page,"#playerNameSetup"),"Sign-up form must disappear after Save Name"
+                assert is_hidden(mock_page,"#savePlayerButton"),"Save Name button must disappear after registration"
+                assert not is_hidden(mock_page,"#savedPlayerIdentity"),"Registered name indicator is missing"
+                assert mock_page.locator("#savedPlayerName").inner_text()=="Wifey","Saved player name missing"
                 assert mock_page.evaluate("window.__anonymousSignIns")==1,"Saving a name should create exactly one anonymous account"
                 assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Hubby","Wifey"],"Initial ranking failed"
                 assert mock_page.locator("#leaderboardList .board-player-level").all_inner_texts()==["LEVEL 4","LEVEL 1"],"Player levels missing from leaderboard"
@@ -241,6 +247,9 @@ def run():
                 mock_page.locator("#menuBack").click()
                 mock_page.locator("#leaderboardButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#leaderboardList .board-person')?.textContent==='Wifey'")
+                assert is_hidden(mock_page,"#playerNameSetup"),"Returning to leaderboard brought back the signup form"
+                assert mock_page.locator("#savedPlayerName").inner_text()=="Wifey","Registered name disappeared after reopening menu"
+                assert mock_page.evaluate("window.__anonymousSignIns")==1,"Reopening leaderboard created a second anonymous account"
                 assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Wifey","Hubby"],"High score did not change ranks"
                 assert mock_page.locator("#leaderboardList .board-player-level").all_inner_texts()==["LEVEL 6","LEVEL 4"],"Updated current levels not shown"
                 assert mock_page.locator("#leaderboardList .board-points").all_inner_texts()==["800","500"],"Updated best scores not shown"
@@ -256,6 +265,48 @@ def run():
                 print("PASS shared leaderboard mock | no-email username setup, best scores and current levels in both views")
             finally:
                 mock_page.close()
+            # Relaunch with an existing Supabase session: the existing
+            # account/name must be restored automatically without showing
+            # the signup form or calling anonymous sign-in again.
+            returning_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                returning_page.set_content(HTML)
+                returning_page.evaluate("""() => {
+                  window.__anonymousSignIns=0;
+                  window.__upserts=0;
+                  window.__players=[{user_id:'wife',username:'Wifey',best_score:4960,current_level:7}];
+                  window.supabase={createClient:()=>({
+                    auth:{
+                      getSession:async()=>({data:{session:{user:{id:'wife'}}},error:null}),
+                      signInAnonymously:async()=>{window.__anonymousSignIns++;throw Error('Must reuse the saved account');}
+                    },
+                    from:()=>({
+                      select(){return this;},
+                      eq(){return this;},
+                      maybeSingle:async()=>({data:{username:'Wifey',best_score:4960,current_level:7},error:null}),
+                      async upsert(){window.__upserts++;return {error:null}},
+                      order(){return this;},
+                      async limit(){return {data:window.__players,error:null}}
+                    })
+                  })}
+                }""")
+                returning_page.locator("#levelButton").click()
+                returning_page.locator("#leaderboardButton").click()
+                returning_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                assert is_hidden(returning_page,"#playerNameSetup"),"Saved login shows the username form"
+                assert not is_hidden(returning_page,"#savedPlayerIdentity"),"Saved login hides registered identity"
+                assert returning_page.locator("#savedPlayerName").inner_text()=="Wifey","Saved username not restored"
+                assert returning_page.locator("#leaderboardList .board-points").first.inner_text()=="4,960","Saved best score missing"
+                assert returning_page.evaluate("window.__anonymousSignIns")==0,"Existing session created a new account"
+                assert returning_page.evaluate("window.__upserts")==0,"Existing session rewrote registration unnecessarily"
+                returning_page.locator("#menuBack").click()
+                returning_page.locator("#leaderboardButton").click()
+                returning_page.wait_for_function("() => document.querySelector('#savedPlayerName')?.textContent==='Wifey'")
+                assert is_hidden(returning_page,"#playerNameSetup"),"Second menu open showed one-time registration again"
+                assert returning_page.evaluate("window.__anonymousSignIns")==0,"Second menu open created another login"
+                print("PASS returning player | name stored, signup hidden, no duplicate auth or registration")
+            finally:
+                returning_page.close()
             # The owner must enable this in the Supabase Dashboard. If it's off,
             # the app must report a clear one-time setup step and retain the typed name.
             disabled_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
@@ -278,6 +329,8 @@ def run():
                 assert "Authentication" in status and "Providers" in status, status
                 assert "reload that settings page" in status, status
                 assert disabled_page.locator("#playerNameInput").input_value()=="Wifey","Name lost after error"
+                assert not is_hidden(disabled_page,"#playerNameSetup"),"Failed signup must leave Save Name visible for retry"
+                assert is_hidden(disabled_page,"#savedPlayerIdentity"),"Failed signup must not claim registration"
                 print("PASS anonymous provider disabled | actionable setup message, name retained")
             finally:
                 disabled_page.close()
