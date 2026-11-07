@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offline challenge-mode regressions; never contacts or modifies Supabase."""
+import json
 import re
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -23,30 +24,41 @@ def slot(page, mode):
 
 
 def two_line_setup(page, mode, lines=0, score=0, level=1):
-    """Load a nearly cleared board via local fixture, never through backend APIs."""
-    page.evaluate("""({key, lines, score, level}) => {
-      const snap=JSON.parse(localStorage.getItem(key));
-      snap.board=Array.from({length:20},()=>Array(10).fill(null));
-      for(let y=18;y<20;y++)for(let x=0;x<10;x++)
-        if(x!==4&&x!==5)snap.board[y][x]='T';
-      snap.active={name:'O',shape:[[1,1],[1,1]],x:4,y:0};
-      snap.score=score;
-      snap.lines=lines;
-      snap.level=level;
-      snap.checkpointScore=score;
-      snap.checkpointLines=lines;
-      snap.status='paused';
-      localStorage.setItem(key,JSON.stringify(snap));
-    }""", {"key": PREFIX + mode, "lines": lines, "score": score, "level": level})
-    # The app saves its in-memory board on pagehide. Prevent that one
-    # cleanup event from replacing the prepared fixture during test reload.
-    page.evaluate("""() => window.addEventListener(
-      'pagehide', event => event.stopImmediatePropagation(),
-      {capture:true, once:true}
-    )""")
-    page.reload()
+    """Use a fresh browser page to load a prepared board, avoiding pagehide autosave."""
+    snap=slot(page,mode)
+    snap["board"]=[[None]*10 for _ in range(20)]
+    for y in (18,19):
+        for x in range(10):
+            if x not in (4,5):
+                snap["board"][y][x]="T"
+    snap["active"]={"name":"O","shape":[[1,1],[1,1]],"x":4,"y":0}
+    snap["score"]=score
+    snap["lines"]=lines
+    snap["level"]=level
+    snap["checkpointScore"]=score
+    snap["checkpointLines"]=lines
+    snap["status"]="paused"
+
+    # Start a new tab so the old app can safely execute its pagehide save
+    # BEFORE the fixture is injected on the new page. Its init script runs
+    # before the app and only once per tab (sessionStorage guard).
+    next_page=page.context.new_page()
+    next_page.route("**/*", lambda route: route.fulfill(
+        status=200,content_type="text/html",body=HTML
+    ) if route.request.url=="https://glowstack.test/" else route.abort())
+    script=(
+        "if(!sessionStorage.getItem('__challenge_fixture_once')){"
+        + "localStorage.setItem(" + json.dumps(PREFIX+mode) + "," + json.dumps(json.dumps(snap)) + ");"
+        + "localStorage.setItem('glow-stack-mode-v1'," + json.dumps(mode) + ");"
+        + "sessionStorage.setItem('__challenge_fixture_once','yes');"
+        + "}"
+    )
+    next_page.add_init_script(script=script)
+    page.close()
+    page=next_page
+    page.goto("https://glowstack.test/")
     prepared=slot(page,mode)
-    assert prepared["board"][19][0]=="T" and prepared["lines"]==lines,("Fixture did not survive reload",prepared)
+    assert prepared["board"][19][0]=="T" and prepared["lines"]==lines,("Fixture did not load",prepared)
     page.locator("#playButton").click()
     page.keyboard.press("Space")
     page.wait_for_timeout(250)
@@ -66,7 +78,7 @@ def two_line_setup(page, mode, lines=0, score=0, level=1):
       };
     }""")
     assert state["savedScore"]>=100,("Expected two-line clear after Space",state)
-
+    return page
 
 def run():
     speed=re.search(r"function interval\(lvl\)\{return ([^}]+)\}",HTML)
@@ -102,7 +114,7 @@ def run():
             assert page.locator("#challengeHud").is_visible()
             assert "LINE LADDER" in page.locator("#challengeHudTitle").inner_text()
             assert page.evaluate("localStorage.getItem('glow-stack-save-v3')")==classic
-            two_line_setup(page,"lines",lines=4)
+            page=two_line_setup(page,"lines",lines=4)
             assert page.locator("#level").inner_text()=="2"
             assert slot(page,"lines")["lines"]==6
             assert slot(page,"lines")["score"]==100
@@ -112,7 +124,7 @@ def run():
             pick(page,"sprint")
             assert "SPRINT 40" in page.locator("#challengeHudTitle").inner_text()
             assert slot(page,"sprint")["level"]==1
-            two_line_setup(page,"sprint",lines=38,level=4)
+            page=two_line_setup(page,"sprint",lines=38,level=4)
             assert page.locator("#overlayTitle").inner_text()=="CHALLENGE COMPLETE"
             assert slot(page,"sprint")["status"]=="won"
             page.reload()
@@ -121,7 +133,7 @@ def run():
             print("PASS Sprint has four stages, completion, and saved winner state")
 
             pick(page,"score")
-            two_line_setup(page,"score",score=90)
+            page=two_line_setup(page,"score",score=90)
             assert page.locator("#level").inner_text()=="2"
             assert page.evaluate("Number(localStorage.getItem('glow-stack-best-v3'))")==0
             assert slot(page,"score")["score"]==190
@@ -134,7 +146,7 @@ def run():
             assert before["held"]==after["held"]==None
             assert page.locator("#holdBox").get_attribute("aria-disabled")=="true"
             assert page.locator("#holdBox .preview-subtitle").inner_text()=="NO HOLD"
-            two_line_setup(page,"nohold",lines=48,level=5)
+            page=two_line_setup(page,"nohold",lines=48,level=5)
             assert page.locator("#overlayTitle").inner_text()=="CHALLENGE COMPLETE"
             print("PASS No-Hold blocks Hold and wins on 50 lines")
 
