@@ -213,12 +213,23 @@ def run():
                         paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
                         top:document.querySelector('.scorebar').getBoundingClientRect().top,
                         boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
+                        boardW:document.querySelector('.board-panel').getBoundingClientRect().width,
+                        stageW:document.querySelector('.stage').getBoundingClientRect().width,
+                        holdW:document.querySelector('.hold-bar').getBoundingClientRect().width,
                         rootClass:document.documentElement.className
                     })""")
                     assert dims["actualDelta"]==expected_delta,(label,"Invalid simulated screen geometry",dims)
                     assert dims["paddingTop"]<=8,(label,"Redundant 76px status-bar gap still applied",dims)
                     assert 4<=dims["top"]<=12,(label,"Stats still pushed below the cleared status bar",dims)
                     assert dims["boardH"]>490,(label,"Board remains squished",dims)
+                    if width>=360:
+                        ratio=dims["boardW"]/dims["stageW"]
+                        assert .845<=ratio<=.865,(label,"Board expanded to nearly full screen again",dims)
+                        assert abs(dims["boardW"]-dims["holdW"])<3,(label,"Hold and board should share original balanced width",dims)
+                        assert dims["boardH"]<=dims["boardW"]*1.87,(label,"Board aspect ratio distorted",dims)
+                    if label=="normal device":
+                        (ROOT / "screenshots").mkdir(exist_ok=True)
+                        already_inset.screenshot(path=str(ROOT/"screenshots"/"iphone_reinstalled_balanced_board.png"),full_page=True)
                     already_inset.locator("#levelButton").click()
                     assert not is_hidden(already_inset,"#menuScreen"),(label,"Top menu button untappable")
                     already_inset.locator("#menuClose").click()
