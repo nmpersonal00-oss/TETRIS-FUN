@@ -54,7 +54,7 @@ Device emulation is useful but does not replace testing in an installed Home Scr
 
 The leaderboard uses the existing **Wifey & Hubby** Supabase project, in its new and separate `public.glow_stack_leaderboard` table. The existing project tables are untouched. The table has Row Level Security, unique case-insensitive usernames, and a database trigger preventing a player's highest score from decreasing.
 
-**One-time dashboard setting required:** In [Wifey & Hubby → Authentication → Sign In / Providers](https://supabase.com/dashboard/project/gtcybnvjdcmuzegxwiic/auth/providers), **enable Anonymous Sign-Ins** if it is currently off. This lets each phone own an authenticated score record without requiring email/password signup. Neither a service-role key nor a secret API key is shipped in the frontend; it uses only the public publishable key.
+**One-time dashboard setting required:** In [Wifey & Hubby → Authentication → Sign In / Providers](https://supabase.com/dashboard/project/gtcybnvjdcmuzegxwiic/auth/providers), **enable Anonymous Sign-Ins** if it is currently off. The setting is managed by Supabase, not by the game code; after enabling it, open Leaderboard and tap Save Name again. This lets each phone own an authenticated score record without requiring email/password signup. Neither a service-role key nor a secret API key is shipped in the frontend; it uses only the public publishable key.
 
 ### How to start
 
