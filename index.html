@@ -343,13 +343,18 @@ function fit(){
 // iOS can reserve an inaccessible strip at the bottom of an installed app.
 const root=document.documentElement;
 const isIPhone=/iPhone/.test(navigator.userAgent);
+// Old Home Screen icons can overlap the status bar; newer opaque icons may
+// already reserve it. Both are valid, so allow a persistent in-app choice.
+const topFitKey='glow-stack-top-fit-v1';
+let topFit='protected';
+try{if(localStorage.getItem(topFitKey)==='native')topFit='native'}catch(_){}
 function syncViewport(){
   const vv=window.visualViewport;
   const sizes=[window.innerHeight,document.documentElement.clientHeight,vv?.height]
     .filter(n=>Number.isFinite(n)&&n>0);
   if(sizes.length)root.style.setProperty('--app-height',Math.floor(Math.min(...sizes))+'px');
   const standalone=navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
-  root.classList.toggle('ios-home-portrait',isIPhone&&standalone&&window.innerHeight>=window.innerWidth);
+  root.classList.toggle('ios-home-portrait',isIPhone&&standalone&&window.innerHeight>=window.innerWidth&&topFit==='protected');
   fit();
 }
 let viewportFitPending=false;
@@ -368,6 +373,23 @@ window.addEventListener('orientationchange',()=>{scheduleViewport();setTimeout(s
 window.visualViewport?.addEventListener('resize',scheduleViewport);
 window.visualViewport?.addEventListener('scroll',scheduleViewport);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleViewport()});
+// Double-tap the LEVEL stat to switch between protected and native status bar
+// clearance. This changes visual layout only and saves an independent setting.
+let lastLevelTap=0;
+document.querySelector('.scorebar .stat:first-child').addEventListener('click',()=>{
+  const now=performance.now();
+  if(lastLevelTap&&now-lastLevelTap<600){
+    topFit=topFit==='protected'?'native':'protected';
+    try{localStorage.setItem(topFitKey,topFit)}catch(_){}
+    lastLevelTap=0;
+    syncViewport();
+    const note=document.createElement('div');
+    note.textContent=topFit==='protected'?'Top clearance: Protected':'Top clearance: Compact';
+    note.style.cssText='position:fixed;z-index:80;top:40%;left:50%;transform:translateX(-50%);white-space:nowrap;background:#0a2746ed;color:#effaff;border:1px solid #74c8fa;border-radius:12px;padding:11px 14px;font:600 13px system-ui;pointer-events:none';
+    document.body.appendChild(note);
+    setTimeout(()=>note.remove(),1200);
+  }else lastLevelTap=now;
+});
 // Optional layout readout: ?layout-debug=1 in Safari, or this function via Web Inspector.
 function layoutReport(){
   const probe=document.createElement('div');
@@ -383,7 +405,7 @@ function layoutReport(){
     padding:[shell.paddingTop,shell.paddingRight,shell.paddingBottom,shell.paddingLeft],
     shellHeight:shell.height,
     standalone:navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches,
-    iPhoneProtected:root.classList.contains('ios-home-portrait')
+    iPhoneProtected:root.classList.contains('ios-home-portrait'),topFitMode:topFit
   };
   probe.remove();return report;
 }

@@ -61,6 +61,20 @@ def run():
                     assert controls["bottom"] <= actions["top"] + 1, (name, "buttons collide", metrics)
                     assert actions["bottom"] <= height, (name, "footer clipped", metrics)
                     assert metrics["appHeight"] <= height, (name, "app exceeds viewport", metrics)
+                    if name == "iPhone 16 Pro Max":
+                        level_card = page.locator(".scorebar .stat").first
+                        level_card.click()
+                        page.wait_for_timeout(70)
+                        level_card.click()
+                        page.wait_for_timeout(70)
+                        compact = page.evaluate("() => document.querySelector('.scorebar').getBoundingClientRect().top")
+                        assert compact < 64, ("compact mode did not activate", compact)
+                        level_card.click()
+                        page.wait_for_timeout(70)
+                        level_card.click()
+                        page.wait_for_timeout(70)
+                        protected = page.evaluate("() => document.querySelector('.scorebar').getBoundingClientRect().top")
+                        assert protected >= 64, ("protected mode did not return", protected)
                     print("PASS", name)
                 finally:
                     page.close()

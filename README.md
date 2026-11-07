@@ -16,6 +16,10 @@ The game is a single-page falling-block puzzle. This release changes **layout on
 4. Removed an inappropriate 70 px minimum board width for exceptionally small viewports.
 5. Added optional **`?layout-debug=1`** diagnostic readout; normal gameplay is unchanged. In Safari Web Inspector you can also call `glowStackLayoutReport()` to read screen, viewport, safe-area and shell measurements.
 
+## One-tap calibration for differently installed iPhones
+
+Some iPhones already reserve top status-bar space; older installed icons can instead paint the clock over the game. When the app is installed on the Home Screen in portrait mode, the default is **Protected** (64px top guard) to keep score cards visible. If a newly installed icon instead shows too much empty space above Level / Score / Best, **double-tap the LEVEL score card** to switch to **Compact** spacing. Double-tap LEVEL again to restore **Protected**. A brief label confirms the choice. The preference is stored separately from game scores, and normal game controls do not change.
+
 ## Testing
 
 A browser geometry regression test is provided in `tests/test_iphone_layout.py`. Run with Python + Playwright installed and a Chromium browser available:
