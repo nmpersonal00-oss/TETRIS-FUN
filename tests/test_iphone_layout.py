@@ -18,6 +18,10 @@ CASES = [
     ("iPhone 15 installed app", 393, 852, True),
     ("iPhone 15 Pro Max installed app", 430, 932, True),
     ("iPhone 16 Pro Max installed app", 440, 956, True),
+    ("iPhone 15 installed app with short viewport", 393, 793, True),
+    ("iPhone 16 Pro Max installed app with short viewport", 440, 894, True),
+    ("iPhone 16 Pro Max installed app with tall island", 440, 894, True),
+    ("compact iPhone installed app", 320, 568, True),
     ("iPhone 16 Pro Max landscape", 956, 440, False),
     ("compact phone", 320, 568, False),
 ]
@@ -39,10 +43,13 @@ def run():
                 try:
                     page.set_content(HTML)
                     if inset:
-                        # Chromium cannot emulate iOS display-mode:standalone exactly.
-                        # Mimic the installed icon's fixed clock clearance only.
-                        # No OS safe-area insets are applied, including at the bottom.
-                        page.add_style_tag(content=".shell{padding-top:49px!important;}")
+                        # Chromium cannot emulate iOS system chrome, but explicitly
+                        # exercise the CSS fallback for navigator.standalone used on
+                        # iOS Home Screen apps when display-mode media is unreliable.
+                        page.evaluate("document.documentElement.classList.add('ios-home-screen')")
+                        if "tall island" in name:
+                            # Stress layout when iOS reserves even more top space.
+                            page.add_style_tag(content="html.ios-home-screen .shell{padding-top:88px!important;}")
                     page.wait_for_timeout(150)
                     metrics = page.evaluate("""() => {
                       const rect = selector => {
@@ -56,6 +63,7 @@ def run():
                               next:rect('#nextOne'),nextCard:rect('.next-top'),
                               nextLabel:rect('.next-top .preview-label'),
                               paddingBottom:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingBottom),
+                              paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
                               viewport:[innerWidth,innerHeight]};
                     }""")
                     board, stage, hold = (metrics[k] for k in ("board","stage","hold"))
@@ -78,9 +86,18 @@ def run():
                     assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
                     assert hold["bottom"]<=metrics["shell"]["bottom"]+1, (name,"Hold clipped offscreen",metrics)
                     if height>width and width>=360:
-                        assert board["width"]>=.84*width, (name,"board too skinny",metrics)
+                        # On a SHORT standalone viewport, preserving the 76px
+                        # Dynamic Island tap-safe zone takes priority over the
+                        # old 84%-width target. The board should still fill the
+                        # space left by the status bar, stats and Hold control.
+                        min_width_fraction=.80 if inset and "short viewport" in name else (.83 if "tall island" in name else .84)
+                        assert board["width"]>=min_width_fraction*width, (name,"board too skinny",metrics)
                         assert stage["height"]-board["height"]<=60, (name,"board not using available height",metrics)
-                    if inset: assert metrics["score"]["top"] >= 49,(name,"installed app clock clearance",metrics)
+                    if inset:
+                        safe_clock=88 if "tall island" in name else 76
+                        assert metrics["paddingTop"] >= safe_clock,(name,"missing iPhone clock clearance",metrics)
+                        assert metrics["score"]["top"] >= safe_clock,(name,"top buttons under Dynamic Island",metrics)
+                        assert metrics["score"]["bottom"]>safe_clock+40,(name,"top controls not tappable",metrics)
 
                     # Start, pause by tapping Level, enter empty Challenges,
                     # return to Options, close X and automatically resume.
@@ -266,6 +283,89 @@ def run():
                 print("PASS captcha required | distinct guidance without false provider-disabled claim")
             finally:
                 captcha_page.close()
+            # A pre-existing LOCAL 4,960 record must sync on the FIRST save
+            # of a new username, despite the current game score still being 0.
+            # Inject a saved best before the startup script runs (the game uses
+            # best loaded from the v3 save key in real iOS Home Screen sessions).
+            existing_best_html=HTML.replace(
+                "if(!load())fresh();refresh();fit();requestAnimationFrame(frame);",
+                "if(!load())fresh();best=Math.max(best,4960);refresh();fit();requestAnimationFrame(frame);"
+            )
+            assert existing_best_html!=HTML,"Could not construct prior-best regression"
+            new_player=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                new_player.set_content(existing_best_html)
+                new_player.evaluate("""() => {
+                  window.__players=[];
+                  window.supabase={createClient:()=>({
+                    auth:{
+                      getSession:async()=>({data:{session:null},error:null}),
+                      signInAnonymously:async()=>({data:{session:{user:{id:'wife'}}},error:null})
+                    },
+                    from:()=>({
+                      filter:null,
+                      select(){return this;},
+                      eq(_,id){this.filter=id;return this;},
+                      maybeSingle:async()=>({data:null,error:null}),
+                      async upsert(p){window.__players=[{...p}];return {error:null}},
+                      order(){return this;},
+                      async limit(){return {data:window.__players,error:null}}
+                    })
+                  })}
+                }""")
+                assert new_player.locator("#best").inner_text()=="4,960","Saved high score not visible"
+                assert new_player.locator("#score").inner_text()=="0","Current run is not a fresh game"
+                new_player.locator("#levelButton").click()
+                new_player.locator("#leaderboardButton").click()
+                new_player.locator("#playerNameInput").fill("Wifey")
+                new_player.locator("#savePlayerButton").click()
+                new_player.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                actual=new_player.evaluate("window.__players[0].best_score")
+                assert actual==4960,("New user did not import saved high score",actual)
+                assert new_player.locator("#leaderboardList .board-points").first.inner_text()=="4,960","New player leaderboard best wrong"
+                print("PASS saved best sync on registration | 4,960 preserved when score is 0")
+            finally:
+                new_player.close()
+
+            # Existing Supabase player with ONLINE best 120 and LOCAL best 4,960:
+            # the game must upload 4,960, never overwrite it with 120, and
+            # maintain the correct Best tile and level after a new game.
+            old_player=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                old_player.set_content(existing_best_html)
+                old_player.evaluate("""() => {
+                  window.__online={user_id:'wife',username:'Wifey',best_score:120,current_level:1};
+                  window.supabase={createClient:()=>({
+                    auth:{getSession:async()=>({data:{session:{user:{id:'wife'}}},error:null})},
+                    from:()=>({
+                      filter:null,updated:null,
+                      select(){return this;},
+                      eq(_,id){this.filter=id;return this;},
+                      maybeSingle:async()=>({data:{...window.__online},error:null}),
+                      update(p){this.updated=p;return this;},
+                      async single(){
+                        window.__online.best_score=Math.max(window.__online.best_score,this.updated.best_score);
+                        window.__online.current_level=this.updated.current_level;
+                        return {data:{best_score:window.__online.best_score,current_level:window.__online.current_level},error:null};
+                      },
+                      order(){return this;},
+                      async limit(){return {data:[window.__online],error:null}}
+                    })
+                  })}
+                }""")
+                old_player.locator("#levelButton").click()
+                old_player.locator("#leaderboardButton").click()
+                old_player.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                old_player.wait_for_function("() => window.__online.best_score===4960")
+                assert old_player.locator("#best").inner_text()=="4,960","Device Best changed incorrectly"
+                old_player.locator("#menuBack").click()
+                old_player.locator("#resetButton").click()
+                assert old_player.locator("#score").inner_text()=="0","Restart did not reset the current run"
+                assert old_player.locator("#best").inner_text()=="4,960","Restart incorrectly reset personal best"
+                assert old_player.evaluate("window.__online.best_score")==4960,"Online best decreased after restart"
+                print("PASS existing account backfill | Supabase 120 upgraded to local 4,960 and survives restart")
+            finally:
+                old_player.close()
             assert not errors,errors
         finally:
             browser.close()
