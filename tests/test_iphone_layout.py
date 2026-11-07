@@ -15,7 +15,9 @@ CASES = [
     ("iPhone 15 Pro Max with short viewport", 430, 873, False),
     ("iPhone 16 Pro Max", 440, 956, False),
     ("iPhone 16 Pro Max with short viewport", 440, 894, False),
-    ("iPhone 16 Pro Max with safe insets", 440, 956, True),
+    ("iPhone 15 installed app", 393, 852, True),
+    ("iPhone 15 Pro Max installed app", 430, 932, True),
+    ("iPhone 16 Pro Max installed app", 440, 956, True),
     ("iPhone 16 Pro Max landscape", 956, 440, False),
     ("compact phone", 320, 568, False),
 ]
@@ -37,9 +39,10 @@ def run():
                 try:
                     page.set_content(HTML)
                     if inset:
-                        # Chromium does not expose real iPhone safe-area insets;
-                        # simulate a full-bleed Home Screen viewport with a notch and Home bar.
-                        page.add_style_tag(content=".shell{padding-top:62px!important;padding-bottom:34px!important;}")
+                        # Chromium cannot emulate iOS display-mode:standalone exactly.
+                        # Mimic the installed icon's fixed clock clearance only.
+                        # No OS safe-area insets are applied, including at the bottom.
+                        page.add_style_tag(content=".shell{padding-top:49px!important;}")
                     page.wait_for_timeout(150)
                     metrics = page.evaluate("""() => {
                       const rect = selector => {
@@ -51,6 +54,7 @@ def run():
                               stage:rect('.stage'),board:rect('.board-panel'),
                               hold:rect('#holdBox'),
                               next:rect('#nextOne'),nextCard:rect('.next-top'),
+                              paddingBottom:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingBottom),
                               viewport:[innerWidth,innerHeight]};
                     }""")
                     board, stage, hold = (metrics[k] for k in ("board","stage","hold"))
@@ -61,18 +65,19 @@ def run():
                     assert metrics["score"]["top"] >= metrics["shell"]["top"], (name,"score clipped",metrics)
                     assert board["top"] >= stage["top"]-1 and board["bottom"] <= stage["bottom"]+1, (name,"board vertical clipping",metrics)
                     assert board["left"] >= stage["left"]-1 and board["right"] <= stage["right"]+1, (name,"board horizontal clipping",metrics)
-                    assert abs(board["height"]-board["width"]*2)<1, (name,"board aspect ratio",metrics)
+                    assert abs(board["height"]-board["width"]*1.86)<1, (name,"board presentation ratio",metrics)
+                    assert metrics["paddingBottom"]<=3,(name,"unwanted bottom padding",metrics)
                     assert metrics["score"]["height"]<=64, (name,"top stats too tall",metrics)
                     assert abs(metrics["nextCard"]["top"]-metrics["score"]["top"])<2, (name,"Next not in top bar",metrics)
                     assert metrics["nextCard"]["bottom"]<=metrics["score"]["bottom"]+1,(name,"Next overflows header",metrics)
-                    assert hold["height"]<=58, (name,"Hold too tall",metrics)
+                    assert hold["height"]<=54, (name,"Hold too tall",metrics)
                     assert hold["top"]>=stage["bottom"]-1,(name,"Hold collides with board",metrics)
                     assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
                     assert hold["bottom"]<=metrics["shell"]["bottom"]+1, (name,"Hold clipped offscreen",metrics)
                     if height>width and width>=360:
-                        assert board["width"]>=.75*width, (name,"board too skinny",metrics)
+                        assert board["width"]>=.84*width, (name,"board too skinny",metrics)
                         assert stage["height"]-board["height"]<=60, (name,"board not using available height",metrics)
-                    if inset: assert metrics["score"]["top"] >= 62,(name,"safe area not respected",metrics)
+                    if inset: assert metrics["score"]["top"] >= 49,(name,"installed app clock clearance",metrics)
 
                     # Start, pause by tapping Level, enter empty Challenges,
                     # return to Options, close X and automatically resume.
@@ -95,6 +100,23 @@ def run():
                     after=page.locator("#held").evaluate("(e) => e.toDataURL()")
                     assert before!=after,(name,"Hold did not update held preview")
                     assert "unavailable" in page.locator("#holdBox").get_attribute("class"),(name,"Hold should only be usable once per piece")
+                    # Verify that Hold has large, visible blocks IN the canvas,
+                    # not merely a wider blank space around a tiny shape.
+                    held_pixels=page.locator("#held").evaluate("""e=>{
+                      const c=e.getContext('2d'),w=e.width,h=e.height;
+                      const pix=c.getImageData(0,0,w,h).data;
+                      let minX=w,maxX=-1,minY=h,maxY=-1;
+                      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+                        const i=(y*w+x)*4;
+                        if(pix[i+3]>70){
+                          minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+                          minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+                        }
+                      }
+                      const r=e.getBoundingClientRect();
+                      return [(maxX-minX+1)*r.width/w,(maxY-minY+1)*r.height/h,r.width,r.height];
+                    }""")
+                    assert held_pixels[0]>=36 and held_pixels[1]>=26,(name,"Held piece remains too small",held_pixels)
                     # Restart current level through menu, play resumes.
                     page.locator("#levelButton").click()
                     page.locator("#restartButton").click()
@@ -105,7 +127,7 @@ def run():
                     assert page.locator("#level").inner_text()=="1",(name,"Level 1 reset failed")
                     assert is_hidden(page,"#overlay"),(name,"Level 1 didn't resume")
 
-                    if name in ("iPhone 15","iPhone 16 Pro Max","iPhone 16 Pro Max with safe insets"):
+                    if name in ("iPhone 15","iPhone 16 Pro Max","iPhone 16 Pro Max installed app"):
                         (ROOT / "screenshots").mkdir(exist_ok=True)
                         slug=name.lower().replace(" ","_")
                         page.screenshot(path=str(ROOT/"screenshots"/f"{slug}.png"),full_page=True)
