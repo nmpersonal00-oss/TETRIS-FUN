@@ -552,7 +552,7 @@ function showMenuPage(page){
 }
 function closeMenu(resume=true){
   if(!menuOpen)return;
-  menuOpen=false;$('menuScreen').hidden=true;
+  menuOpen=false;lbOpen=false;$('menuScreen').hidden=true;
   if(resume&&menuWasPlaying&&status==='paused')begin();
   menuWasPlaying=false;
   $('levelButton').focus({preventScroll:true});
