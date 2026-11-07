@@ -39,7 +39,7 @@ The `manifest.webmanifest` continues to declare a standalone app. This slightly 
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises 15 phone geometry configurations, including shortened viewports, iOS Home Screen launch-mode fallback and extra-tall Dynamic Island clearance; it validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 65px and minimum visible held-piece size. **All Playwright pages block outbound network requests** and Supabase functionality is simulated with local mocks; running automated tests never creates production anonymous accounts or touches the live Supabase tables. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
 
 You can run locally with Python + Playwright/Chromium:
 
