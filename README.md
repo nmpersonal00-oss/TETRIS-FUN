@@ -69,7 +69,7 @@ The leaderboard uses the existing **Wifey & Hubby** Supabase project, in its new
 ### How to start
 
 1. On each phone, open Glow Stack, tap **Level → Leaderboard**.
-2. Choose a different player name (2–18 letters/numbers/spaces/underscores/hyphens) and press **Save Name**. **No email address or password is required:** Supabase anonymously identifies each installed copy of the game in the background, provided Anonymous Sign-Ins is enabled.
+2. Choose a different player name (2–18 letters/numbers/spaces/underscores/hyphens) and press **Save Name**. **No email address or password is required:** Supabase creates a fresh anonymous identity **only when you tap Save Name**. Merely opening Leaderboard or Challenges does not create an account. Anonymous Sign-Ins must remain enabled in Supabase.
 3. Close the menu and play. As you earn points or advance levels, the app submits your **personal best score** and **current level** to Supabase. The best score never decreases, even after a new run; your current level *does* reset if you restart at Level 1.
 4. Open **Leaderboard** to see first and second place ranked by best score, plus both players' levels. Open **Challenges** to compare those same levels and best scores (challenge activities are coming later). While either page is open, online data refreshes approximately every 10 seconds. Higher best scores move a player ahead automatically, with alphabetical order breaking equal scores.
 
@@ -77,7 +77,7 @@ The leaderboard stores the score and current level in `public.glow_stack_leaderb
 
 The original game's local saved-game keys are unchanged. When you register a name, the app now **imports your existing local Best score** into Supabase, including scores achieved before signing up. On subsequent opens it reconciles stored and online bests in both directions using the higher value, so the Best tile and leaderboard agree. The online database trigger prevents lower scores from replacing a personal best. Current Score still displays the active run separately, and restarting at Level 1 does not reduce Best.
 
-Online rankings cannot display while offline, but gameplay still works. Submissions queue a retry for transient offline failures. Since the game score is calculated in the public browser, this is a friendly competition rather than a tamper-proof anti-cheat leaderboard.
+Online rankings cannot display while offline, but gameplay still works. Submissions queue a retry for transient offline failures. Since the game score is calculated in the public browser, this is a friendly competition rather than a tamper-proof anti-cheat leaderboard. **The game is publicly accessible:** while anonymous sign-in is enabled, a visitor who chooses a username can still create an account. The app reduces unnecessary sign-ups but does not enforce an invitation-only/two-account limit.
 
 ### Test coverage
 
