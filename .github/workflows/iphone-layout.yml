@@ -18,6 +18,8 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Test touch game and menus across phone sizes
         run: python tests/test_iphone_layout.py
+      - name: Test gentle level speed and selectable challenges without network access
+        run: python tests/test_challenges.py
       - name: Upload mobile visual checks
         if: always()
         uses: actions/upload-artifact@v4
