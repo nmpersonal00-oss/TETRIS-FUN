@@ -183,39 +183,66 @@ def run():
             # status bar excluded from innerHeight. The old fixed 76px
             # clearance doubled the gap and compressed the board. Make this
             # geometry explicit instead of simulating only full-bleed phones.
-            already_inset=isolated_page(browser,
-                viewport={"width":440,"height":894},
-                screen={"width":440,"height":956},
-                is_mobile=True,has_touch=True,user_agent=UA)
+            for label,width,height,screen_width,screen_height,expected_delta in [
+                ("normal device",440,894,440,956,62),
+                # Reproduces why the previous detector missed real iPhones:
+                # screen.width and innerWidth differ under Display Zoom.
+                ("Display Zoom width mismatch",393,852,430,932,80),
+                # Some iOS installations exclude more than the old
+                # hard-coded 105px ceiling. The extra top blank gap must
+                # be removed in that configuration too.
+                ("large status bar exclusion",393,820,430,956,136),
+            ]:
+                already_inset=isolated_page(browser,
+                    viewport={"width":width,"height":height},
+                    screen={"width":screen_width,"height":screen_height},
+                    is_mobile=True,has_touch=True,user_agent=UA)
+                try:
+                    standalone_html=HTML.replace(
+                        "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');",
+                        "Object.defineProperty(window.navigator,'standalone',{configurable:true,value:true});"
+                        "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');"
+                    )
+                    assert standalone_html!=HTML,"Could not emulate installed iOS app"
+                    already_inset.set_content(standalone_html)
+                    already_inset.wait_for_function(
+                        "() => document.documentElement.classList.contains('ios-viewport-already-inset')"
+                    )
+                    dims=already_inset.evaluate("""() => ({
+                        actualDelta:screen.height-innerHeight,
+                        paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
+                        top:document.querySelector('.scorebar').getBoundingClientRect().top,
+                        boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
+                        rootClass:document.documentElement.className
+                    })""")
+                    assert dims["actualDelta"]==expected_delta,(label,"Invalid simulated screen geometry",dims)
+                    assert dims["paddingTop"]<=8,(label,"Redundant 76px status-bar gap still applied",dims)
+                    assert 4<=dims["top"]<=12,(label,"Stats still pushed below the cleared status bar",dims)
+                    assert dims["boardH"]>490,(label,"Board remains squished",dims)
+                    already_inset.locator("#levelButton").click()
+                    assert not is_hidden(already_inset,"#menuScreen"),(label,"Top menu button untappable")
+                    already_inset.locator("#menuClose").click()
+                    assert is_hidden(already_inset,"#menuScreen"),(label,"Menu stuck")
+                    print(f"PASS reinstalled iPhone with {label} | top gap {dims['paddingTop']}px instead of 76px")
+                finally:
+                    already_inset.close()
+            # Full-bleed installed iPhones still NEED the original 76px
+            # Dynamic Island clearance to keep husband's top buttons tappable.
+            full_bleed=isolated_page(browser,viewport={"width":440,"height":956},
+                screen={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
             try:
-                standalone_html=HTML.replace(
-                    "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');",
-                    "Object.defineProperty(window.navigator,'standalone',{configurable:true,value:true});"
-                    "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');"
-                )
-                assert standalone_html!=HTML,"Could not emulate installed iOS app"
-                already_inset.set_content(standalone_html)
-                already_inset.wait_for_function(
-                    "() => document.documentElement.classList.contains('ios-viewport-already-inset')"
-                )
-                dims=already_inset.evaluate("""() => ({
-                    actualDelta:screen.height-innerHeight,
-                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
-                    top:document.querySelector('.scorebar').getBoundingClientRect().top,
-                    boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
-                    rootClass:document.documentElement.className
+                full_bleed.set_content(standalone_html)
+                full_bleed.wait_for_function("() => document.querySelector('.shell')")
+                full_bleed.wait_for_timeout(40)
+                dims=full_bleed.evaluate("""() => ({
+                    inset:document.documentElement.classList.contains('ios-viewport-already-inset'),
+                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop)
                 })""")
-                assert dims["actualDelta"]==62,("Invalid mock for iOS status-bar viewport",dims)
-                assert dims["paddingTop"]<=8,("Old 76px status-bar gap is still double-applied",dims)
-                assert 4<=dims["top"]<=12,("Top of viewport already below clock: must use its space",dims)
-                assert dims["boardH"]>550,("Board still squished by duplicated status bar",dims)
-                already_inset.locator("#levelButton").click()
-                assert not is_hidden(already_inset,"#menuScreen"),"Top menu button untappable after inset fix"
-                already_inset.locator("#menuClose").click()
-                assert is_hidden(already_inset,"#menuScreen"),"Menu stuck after inset fix"
-                print("PASS freshly reinstalled iOS PWA | no duplicate 62px+76px top gap")
+                assert not dims["inset"],("Full-bleed mode wrongly classified as pre-inset",dims)
+                assert dims["paddingTop"]>=76,("Dynamic Island protection lost on full-bleed iPhone",dims)
+                print("PASS full-bleed iPhone | original 76px Dynamic Island protection remains")
             finally:
-                already_inset.close()
+                full_bleed.close()
             # Mock the Supabase network to verify actual username and ranking UI.
             # Live database RLS and SQL checks are verified separately.
             mock_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
