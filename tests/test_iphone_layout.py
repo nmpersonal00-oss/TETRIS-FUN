@@ -54,6 +54,7 @@ def run():
                               stage:rect('.stage'),board:rect('.board-panel'),
                               hold:rect('#holdBox'),
                               next:rect('#nextOne'),nextCard:rect('.next-top'),
+                              nextLabel:rect('.next-top .preview-label'),
                               paddingBottom:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingBottom),
                               viewport:[innerWidth,innerHeight]};
                     }""")
@@ -70,6 +71,8 @@ def run():
                     assert metrics["score"]["height"]<=64, (name,"top stats too tall",metrics)
                     assert abs(metrics["nextCard"]["top"]-metrics["score"]["top"])<2, (name,"Next not in top bar",metrics)
                     assert metrics["nextCard"]["bottom"]<=metrics["score"]["bottom"]+1,(name,"Next overflows header",metrics)
+                    assert metrics["nextLabel"]["top"]>=metrics["nextCard"]["top"]+1, (name,"Next text overflows header",metrics)
+                    assert metrics["next"]["bottom"]<=metrics["nextCard"]["bottom"]-1,(name,"Next block clipped by header",metrics)
                     assert hold["height"]<=54, (name,"Hold too tall",metrics)
                     assert hold["top"]>=stage["bottom"]-1,(name,"Hold collides with board",metrics)
                     assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
@@ -117,6 +120,9 @@ def run():
                       return [(maxX-minX+1)*r.width/w,(maxY-minY+1)*r.height/h,r.width,r.height];
                     }""")
                     assert held_pixels[0]>=36 and held_pixels[1]>=26,(name,"Held piece remains too small",held_pixels)
+                    if name in ("iPhone 16 Pro Max installed app",):
+                        (ROOT / "screenshots").mkdir(exist_ok=True)
+                        page.screenshot(path=str(ROOT / "screenshots" / "iphone_16_pro_max_with_held_piece.png"),full_page=True)
                     # Restart current level through menu, play resumes.
                     page.locator("#levelButton").click()
                     page.locator("#restartButton").click()
