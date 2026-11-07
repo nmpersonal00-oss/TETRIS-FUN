@@ -28,8 +28,8 @@ button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
 .shell{
   height:100vh;height:100dvh;min-height:0;width:100%;max-width:720px;
   margin:0 auto;position:relative;isolation:isolate;overflow:hidden;
-  display:grid;grid-template-rows:auto minmax(0,1fr);
-  gap:clamp(10px,1.5dvh,18px);
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  gap:clamp(6px,1dvh,10px);
   padding:max(10px,env(safe-area-inset-top,0px))
           max(10px,env(safe-area-inset-right,0px))
           max(10px,env(safe-area-inset-bottom,0px))
@@ -41,27 +41,32 @@ button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
 @media (display-mode:standalone) and (orientation:portrait){
   .shell{padding-top:max(56px,env(safe-area-inset-top,0px))}
 }
-.scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1.7vw,11px);width:min(100%,580px);margin:0 auto;min-height:0}
-.stat{min-width:0;min-height:clamp(61px,8.6dvh,80px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;border-radius:15px;padding:9px 4px;background:linear-gradient(153deg,rgba(16,46,78,.96),rgba(4,13,31,.95));border:1px solid rgba(91,180,239,.58);box-shadow:inset 0 1px 1px rgba(204,243,255,.13),0 0 17px rgba(22,128,239,.13)}
+/* Compact information strip: Level opens Options, Next previews only one piece. */
+.scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(72px,.92fr);align-items:stretch;gap:clamp(4px,1.25vw,8px);width:100%;max-width:670px;height:clamp(54px,6.7dvh,62px);margin:0 auto;min-width:0}
+.stat{height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;border-radius:11px;text-align:center;background:linear-gradient(153deg,rgba(16,46,78,.96),rgba(4,13,31,.95));border:1px solid rgba(91,180,239,.58);box-shadow:inset 0 1px 1px rgba(204,243,255,.13),0 0 12px rgba(22,128,239,.12)}
 button.stat{position:relative;border-color:#5aace3;background:linear-gradient(150deg,#17436a,#07192e)}
-button.stat:active{background:linear-gradient(150deg,#245987,#09233d);transform:scale(.987)}
-.stat-label{display:block;color:#abd4ef;letter-spacing:.17em;font-size:clamp(9px,2.45vw,12px);font-weight:850;text-transform:uppercase;line-height:1.15}
-.stat-value{display:block;font-variant-numeric:tabular-nums;font-size:clamp(21px,5.4vw,31px);line-height:1.04;font-weight:900;letter-spacing:-.035em;color:#effbff;text-shadow:0 0 16px rgba(98,211,255,.4)}
+button.stat:active{background:#20517d;transform:scale(.987)}
+.stat-label{display:block;color:#abd4ef;letter-spacing:.11em;font-size:clamp(8px,2vw,10px);font-weight:850;text-transform:uppercase;line-height:1.1}
+.stat-value{display:block;font-variant-numeric:tabular-nums;font-size:clamp(16px,4.2vw,22px);line-height:1.04;font-weight:900;letter-spacing:-.04em;color:#effbff;text-shadow:0 0 12px rgba(98,211,255,.4)}
 .stat:first-child .stat-value{color:#87dfff}
-.stat .menu-chevron{position:absolute;right:8px;top:8px;color:#88c9ee;font-size:12px;line-height:1}
+.stat .menu-chevron{position:absolute;right:5px;top:5px;color:#88c9ee;font-size:10px;line-height:1}
 .stage{min-width:0;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;overflow:hidden}
-.play-group{display:flex;align-items:stretch;gap:clamp(7px,2vw,14px);max-width:100%;min-width:0}
-.board-panel{position:relative;flex:none;width:250px;height:500px;aspect-ratio:1/2;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
+.board-panel{position:relative;flex:none;width:280px;height:560px;aspect-ratio:1/2;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
 .board-inner{position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(85,166,232,.45);background:#040b17;touch-action:none}
 #board{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-.rail{flex:0 0 clamp(79px,21vw,116px);min-width:0;max-width:116px;display:flex;flex-direction:column;justify-content:space-between;gap:clamp(9px,1.5dvh,15px)}
-.preview-card{min-width:0;min-height:108px;width:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;border-radius:14px;border:1px solid rgba(86,165,228,.7);padding:10px 4px 8px;background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 18px rgba(21,116,209,.14)}
-button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 18px rgba(55,169,244,.21)}
+.preview-card{min-width:0;min-height:0;border-radius:11px;border:1px solid rgba(86,165,228,.7);background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 14px rgba(21,116,209,.13)}
+button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 14px rgba(55,169,244,.2)}
 button.preview-card:active{background:#164d77;transform:scale(.985)}
 .preview-card.unavailable{opacity:.55}
-.preview-label{display:block;text-align:center;font-size:clamp(9px,2.7vw,12px);color:#b1dcf6;text-transform:uppercase;font-weight:850;letter-spacing:.12em}
-.preview-card canvas{width:100%;height:auto;aspect-ratio:1.2/1;display:block}
-.preview-subtitle{font-size:clamp(8px,2.2vw,10px);font-weight:750;color:#8ab9d9;letter-spacing:.05em;text-align:center}
+.preview-label{display:block;text-align:center;font-size:clamp(8px,2vw,10px);color:#b1dcf6;text-transform:uppercase;font-weight:850;letter-spacing:.1em;line-height:1.1}
+.preview-subtitle{font-size:clamp(8px,2vw,10px);font-weight:750;color:#8ab9d9;letter-spacing:.04em;text-align:center;line-height:1.1}
+.next-top{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:100%;padding:2px;overflow:hidden}
+.next-top canvas{display:block;width:clamp(43px,11vw,54px);height:auto;aspect-ratio:6/5;margin:0 auto}
+.hold-strip{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;min-height:0}
+.hold-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;height:clamp(48px,6.3dvh,56px);width:min(100%,300px);padding:3px clamp(12px,4vw,18px);border-radius:12px}
+.hold-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
+.hold-copy .preview-label,.hold-copy .preview-subtitle{text-align:left}
+.hold-bar canvas{flex:0 0 auto;display:block;width:clamp(52px,14vw,62px);height:auto;aspect-ratio:6/5}
 .overlay{position:absolute;inset:0;z-index:6;background:rgba(0,5,15,.73);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .overlay-title{text-align:center;font-size:clamp(18px,4vw,25px);font-weight:900;letter-spacing:.13em;color:#e6f7ff;text-shadow:0 0 16px #398bcc}
 .play-btn{border:1px solid #99e1ff;background:linear-gradient(140deg,#1a76b3,#0d396b);color:#eefaff;font-size:14px;font-weight:850;letter-spacing:.11em;border-radius:100px;padding:16px 35px;box-shadow:0 0 24px rgba(46,160,244,.42)}
@@ -82,24 +87,27 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .menu-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;color:#e6f6ff;font-size:23px;font-weight:550}
 .menu-back{position:absolute;left:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;font-size:21px}
 .challenge-empty{height:clamp(190px,36dvh,300px);border:1px dashed rgba(92,172,224,.3);border-radius:14px;margin-top:23px;background:radial-gradient(ellipse at center,#15305555,#07112222)}
-@media(max-width:360px){.shell{gap:8px}.stage{gap:6px}.rail{flex-basis:76px}.preview-card{padding:7px 2px;min-height:95px}.stat{min-height:57px}.stat-label{font-size:9px}.stat-value{font-size:21px}}
-@media(max-height:670px){.shell{gap:6px}.stat{min-height:52px;padding:5px 3px}.stat-value{font-size:20px}.rail{gap:6px}.preview-card{min-height:83px;padding:6px 2px}.menu-card{padding-top:18px}}
+@media(max-width:360px){.shell{gap:6px}.scorebar{height:53px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(65px,.85fr)}.stat-value{font-size:16px}.stat-label{font-size:8px}.next-top canvas{width:43px}.hold-bar{height:48px}}
+@media(max-height:670px){.shell{gap:5px}.scorebar{height:48px}.stat-value{font-size:16px}.hold-bar{height:46px}.next-top canvas{width:40px}.menu-card{padding-top:18px}}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
 </style></style>
 </head>
 <body>
 
 <main class="shell" aria-label="Glow Stack block puzzle">
-  <section class="scorebar" aria-label="Game statistics">
+  <section class="scorebar" aria-label="Game statistics and next piece">
     <button class="stat" type="button" id="levelButton" aria-haspopup="dialog" aria-controls="menuScreen" aria-label="Level and game options">
       <span class="menu-chevron" aria-hidden="true">☰</span>
       <span class="stat-label">Level</span><strong class="stat-value" id="level">1</strong>
     </button>
     <div class="stat"><span class="stat-label">Score</span><strong class="stat-value" id="score">0</strong></div>
     <div class="stat"><span class="stat-label">Best</span><strong class="stat-value" id="best">0</strong></div>
+    <div class="preview-card next-top">
+      <span class="preview-label">Next</span>
+      <canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas>
+    </div>
   </section>
-  <section class="stage" aria-label="Game board and block previews">
-    <div class="play-group">
+  <section class="stage" aria-label="Game board">
     <div class="board-panel">
       <div class="board-inner">
         <canvas id="board" width="300" height="600" role="img" aria-label="Tetris game board. Drag side to side to move, tap to rotate, drag downward to lower a piece, or flick downward to drop it."></canvas>
@@ -111,13 +119,12 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
         </div>
       </div>
     </div>
-    <aside class="rail" aria-label="Next piece and held piece">
-      <div class="preview-card"><span class="preview-label">Next</span><canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas></div>
-      <button class="preview-card hold-box" id="holdBox" type="button" aria-label="Hold or swap current piece" title="Hold or swap piece">
-        <span class="preview-label">Hold</span><canvas id="held" width="120" height="100" aria-hidden="true"></canvas><span class="preview-subtitle">TAP TO SWAP</span>
-      </button>
-    </aside>
-    </div>
+  </section>
+  <section class="hold-strip" aria-label="Hold piece">
+    <button class="preview-card hold-bar" id="holdBox" type="button" aria-label="Hold or swap current piece" title="Hold or swap piece">
+      <span class="hold-copy"><span class="preview-label">Hold</span><span class="preview-subtitle">Tap to swap</span></span>
+      <canvas id="held" width="120" height="100" aria-hidden="true"></canvas>
+    </button>
   </section>
   <section class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
     <div class="menu-card">
@@ -394,13 +401,14 @@ window.addEventListener('pagehide',save);
 function fit(){
   const stage=document.querySelector('.stage');
   const panel=document.querySelector('.board-panel');
-  const rail=document.querySelector('.rail');
-  const group=document.querySelector('.play-group');
-  const gap=parseFloat(getComputedStyle(group).columnGap)||8;
-  const sw=stage.clientWidth,sh=stage.clientHeight,rw=rail.getBoundingClientRect().width;
-  if(!sw||!sh||!rw)return;
-  const width=Math.max(1,Math.floor(Math.min(520,(sh-4)/2,sw-rw-gap-3)));
+  const hold=document.querySelector('.hold-bar');
+  const sw=stage.clientWidth,sh=stage.clientHeight;
+  if(!sw||!sh)return;
+  // A 10 × 20 game must keep 1:2 proportions, but now uses ALL space
+  // remaining between the compact top cards and the slim Hold strip.
+  const width=Math.max(1,Math.floor(Math.min(540,sw-4,(sh-4)/2)));
   panel.style.width=width+'px';panel.style.height=width*2+'px';
+  hold.style.width=width+'px';
 }
 let fitScheduled=false;
 function scheduleFit(){
