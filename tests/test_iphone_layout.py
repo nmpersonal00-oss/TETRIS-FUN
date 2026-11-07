@@ -86,7 +86,12 @@ def run():
                     assert abs(hold["width"]-board["width"])<=1, (name,"Hold width not aligned with board",metrics)
                     assert hold["bottom"]<=metrics["shell"]["bottom"]+1, (name,"Hold clipped offscreen",metrics)
                     if height>width and width>=360:
-                        assert board["width"]>=.84*width, (name,"board too skinny",metrics)
+                        # On a SHORT standalone viewport, preserving the 76px
+                        # Dynamic Island tap-safe zone takes priority over the
+                        # old 84%-width target. The board should still fill the
+                        # space left by the status bar, stats and Hold control.
+                        min_width_fraction=.80 if inset and "short viewport" in name else .84
+                        assert board["width"]>=min_width_fraction*width, (name,"board too skinny",metrics)
                         assert stage["height"]-board["height"]<=60, (name,"board not using available height",metrics)
                     if inset:
                         safe_clock=88 if "tall island" in name else 76
