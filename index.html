@@ -24,20 +24,26 @@ body,button,canvas,.shell,.stage,.rail{user-select:none;-webkit-user-select:none
 button{font:inherit;color:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;cursor:pointer}
 button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
 [hidden]{display:none!important}
-/* Fill the page's entire usable viewport with no CSS safe-area inset padding.
-   Keep a small status-text clearance on installed portrait icons only. */
+/* Keep interactive statistics below iPhone system chrome.
+   - Safari: honor the exposed top safe-area inset only when present.
+   - Installed iOS Home Screen: some Safari/WebKit versions report 0 inset or
+     omit display-mode:standalone. Reserve a conservative 76px clock/Dynamic
+     Island clearance even on those versions.
+   The horizontal and bottom margins stay at the user's existing tiny 3px. */
 .shell{
   height:100vh;height:100dvh;min-height:0;width:100%;max-width:720px;
   margin:0 auto;position:relative;isolation:isolate;overflow:hidden;
   display:grid;grid-template-rows:auto minmax(0,1fr) auto;
   gap:clamp(3px,.45dvh,5px);
-  padding:6px 3px 3px;
+  padding:max(6px, env(safe-area-inset-top, 0px)) 3px 3px;
 }
-/* Do not read iOS safe-area values: reserve only the visible clock's
-   approximate clearance on an installed portrait Home Screen icon.
-   The bottom has no reserved safe-area strip. */
 @media (display-mode:standalone) and (orientation:portrait){
-  .shell{padding-top:49px}
+  .shell{padding-top:max(76px, env(safe-area-inset-top, 0px))}
+}
+@media (orientation:portrait){
+  /* navigator.standalone is supported on iOS releases where CSS display-mode
+     detection is unreliable. It uses the exact same clearance as above. */
+  html.ios-home-screen .shell{padding-top:max(76px, env(safe-area-inset-top, 0px))}
 }
 /* Compact information strip: Level opens Options, Next previews only one piece. */
 .scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(72px,.92fr);align-items:stretch;gap:clamp(4px,1.25vw,8px);width:100%;max-width:670px;height:clamp(46px,5.3dvh,51px);margin:0 auto;min-width:0}
@@ -198,6 +204,8 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 </main>
 <script>
 (()=>{'use strict';
+// Apple's Home Screen flag is a second detection path for older iOS versions.
+if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');
 const W=10,H=20,CELL=30;
 const STORE='glow-stack-save-v3',BEST='glow-stack-best-v3';
 const OLD_SAVES=['glow-stack-save-v2','glow-stack-save-v1'];
@@ -233,12 +241,24 @@ function fresh(lvl=1,points=0,completedLines=(lvl-1)*10){
   $('clearToast').classList.remove('show');spawn();refresh();save();
   if(lbUsername&&lbUser)queueLeaderboardScore();
 }
+// The Best tile is the device's stored personal record, including runs played
+// before the player signed up. The online leaderboard must represent that SAME
+// record, not only the current run (which may be much lower).
+function adoptPersonalBest(onlineScore=0){
+  const safeOnline=Number.isSafeInteger(Number(onlineScore))?Math.max(0,Number(onlineScore)):0;
+  lbBest=Math.max(lbBest,best,score,safeOnline);
+  if(lbBest>best){
+    best=lbBest;
+    try{localStorage.setItem(BEST,String(best))}catch(_){}
+  }
+}
 function addPoints(n){
   score=Math.min(Number.MAX_SAFE_INTEGER,score+n);
   if(score>best){best=score;try{localStorage.setItem(BEST,String(best))}catch(_){}}
-  // Never attribute an old local score to another player: submit only points
-  // earned while the current authenticated device username is selected.
-  if(lbUsername&&lbUser&&score>lbBest){lbBest=score;queueLeaderboardScore();}
+  if(lbUsername&&lbUser){
+    adoptPersonalBest();
+    if(lbBest>lbLastSent)queueLeaderboardScore();
+  }
 }
 function manipulated(wasGrounded){if(wasGrounded&&lockResets<12){lockTime=0;lockResets++}if(!grounded())lockTime=0;refresh()}
 function move(dx){if(status!=='playing'||!active)return;const was=grounded();if(!collide(active.shape,active.x+dx,active.y)){active.x+=dx;manipulated(was)}}
@@ -483,10 +503,12 @@ async function initializeLeaderboard(){
     if(profileError)throw profileError;
     if(data){
       lbUsername=data.username;
-      lbBest=Number(data.best_score)||0;
-      lbLastSent=lbBest;
+      const storedOnlineBest=Math.max(0,Number(data.best_score)||0);
+      lbLastSent=storedOnlineBest; // Last value confirmed in Supabase, NOT local best
       lbLastLevelSent=Math.max(1,Number(data.current_level)||1);
-      if(level!==lbLastLevelSent)queueLeaderboardScore();
+      adoptPersonalBest(storedOnlineBest);
+      refresh(); // Refresh the Best tile if the online record was higher
+      if(lbBest>lbLastSent||level!==lbLastLevelSent)queueLeaderboardScore();
     }
     $('playerNameInput').value=lbUsername;
   })();
@@ -540,6 +562,10 @@ async function openLeaderboard(){
   try{
     setBoardStatus('Connecting to shared leaderboard…');
     await initializeLeaderboard();
+    if(lbUsername&&lbUser){
+      adoptPersonalBest();
+      if(lbBest>lbLastSent)queueLeaderboardScore();
+    }
     if(lbOpen)await fetchLeaderboard();
   }catch(e){setBoardStatus(leaderboardError(e),true)}
 }
@@ -552,6 +578,9 @@ async function saveLeaderboardName(){
   try{
     setBoardStatus('Saving your player name…');
     await initializeLeaderboard();
+    // Import the Best tile's saved record when registering a name, even if
+    // the current run only has a few points.
+    adoptPersonalBest();
     const {error}=await lbClient.from('glow_stack_leaderboard').upsert({
       user_id:lbUser,username:name,best_score:lbBest,current_level:level
     },{onConflict:'user_id'});
@@ -596,6 +625,7 @@ window.addEventListener('online',()=>queueLeaderboardScore());
 async function refreshLeaderboardIfNeeded(){
   if(!lbOpen||!lbClient||!lbUser||Date.now()-lbLastFetch<10000)return;
   try{
+    adoptPersonalBest();
     if(lbBest>lbLastSent||level!==lbLastLevelSent)queueLeaderboardScore();
     await fetchLeaderboard();
   }catch(e){setBoardStatus(leaderboardError(e),true)}
