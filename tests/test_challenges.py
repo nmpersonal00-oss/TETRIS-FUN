@@ -41,10 +41,23 @@ def two_line_setup(page, mode, lines=0, score=0, level=1):
     page.reload()
     page.locator("#playButton").click()
     page.keyboard.press("Space")
-    page.wait_for_function("""() => {
-      const snap=JSON.parse(localStorage.getItem('glow-stack-challenge-v1-' + localStorage.getItem('glow-stack-mode-v1')));
-      return snap && snap.score >= 100;
+    page.wait_for_timeout(250)
+    state=page.evaluate("""() => {
+      const key='glow-stack-challenge-v1-' + localStorage.getItem('glow-stack-mode-v1');
+      const snap=JSON.parse(localStorage.getItem(key));
+      return {
+        activeMode:localStorage.getItem('glow-stack-mode-v1'),
+        visibleScore:document.querySelector('#score').textContent,
+        visibleLevel:document.querySelector('#level').textContent,
+        overlayHidden:document.querySelector('#overlay').hidden,
+        overlayText:document.querySelector('#overlayTitle').textContent,
+        active:snap?.active,
+        boardBottom:snap?.board?.slice(-2),
+        savedStatus:snap?.status,
+        savedScore:snap?.score
+      };
     }""")
+    assert state["savedScore"]>=100,("Expected two-line clear after Space",state)
 
 
 def run():
