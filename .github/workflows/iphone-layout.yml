@@ -1,4 +1,4 @@
-name: iPhone layout geometry
+name: Mobile game layout and gestures
 on:
   push:
     branches: [main]
@@ -16,5 +16,12 @@ jobs:
         run: |
           python -m pip install playwright
           python -m playwright install --with-deps chromium
-      - name: Check iPhone layout and controls
+      - name: Test touch game and menus across phone sizes
         run: python tests/test_iphone_layout.py
+      - name: Upload mobile visual checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-game-screenshots
+          path: screenshots/*.png
+          if-no-files-found: ignore

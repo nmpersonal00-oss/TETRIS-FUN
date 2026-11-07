@@ -3,104 +3,141 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#03060e">
+<meta name="theme-color" content="#07152b">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Glow Stack">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- A newly installed Home Screen icon should use the system-managed status bar. -->
 <title>Glow Stack</title>
 <meta name="application-name" content="Glow Stack">
 <meta name="description" content="Neon block-stacking game optimized for iPhone.">
 <style>
+
 :root{color-scheme:dark;--bg:#02050c;--ink:#edf8ff;--cyan:#70d8ff;--muted:#92b3cb}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%}
-html{background:var(--bg)}
-body{background:radial-gradient(ellipse 77% 70% at 50% 42%,#0a1b34 0%,#030711 58%,#010308 100%);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+html{background:#030817}
+body{background:radial-gradient(ellipse 85% 68% at 50% 44%,#10274b 0%,#07152b 48%,#020711 100%);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 body,button,canvas,.shell,.stage,.rail{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 ::selection{background:transparent}
-button{font:inherit;color:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;cursor:pointer;outline:none;-webkit-user-select:none;user-select:none}
-button:focus-visible{outline:2px solid #d7f6ff;outline-offset:2px}
+button{font:inherit;color:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;cursor:pointer}
+button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
 [hidden]{display:none!important}
-.shell{height:100vh;height:100dvh;height:var(--app-height,100dvh);position:relative;width:100%;max-width:740px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;min-height:0;overflow:hidden;padding:max(8px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));gap:clamp(5px,.8dvh,8px);isolation:isolate}
-/* Older installed iPhone icons may place status icons over the page while
-   reporting a zero top safe-area inset. Always protect the score row. */
-html.ios-home-portrait .shell{padding-top:max(64px,env(safe-area-inset-top,0px))}
-.scorebar{width:min(100%,490px);margin:0 auto;flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.stat{min-width:0;text-align:center;padding:6px 3px 5px;border-radius:12px;background:linear-gradient(145deg,rgba(14,34,56,.97),rgba(3,10,24,.95));border:1px solid rgba(71,147,211,.42);box-shadow:inset 0 1px 1px rgba(163,224,255,.13),0 0 14px rgba(14,118,225,.12)}
-.stat-label{display:block;color:var(--muted);letter-spacing:.15em;font-size:clamp(9px,2.2vw,11px);font-weight:800;text-transform:uppercase}
-.stat-value{display:block;font-variant-numeric:tabular-nums;font-size:clamp(18px,5vw,26px);line-height:1.22;font-weight:850;margin-top:1px;color:#e9f9ff;text-shadow:0 0 13px rgba(91,196,255,.24)}
-.stat:first-child .stat-value{color:#82d9ff}
-.stage{width:100%;min-height:0;min-width:0;display:flex;align-items:flex-start;justify-content:center;gap:7px;overflow:hidden}
-.board-panel{position:relative;flex:0 0 auto;width:230px;height:460px;max-height:100%;aspect-ratio:1/2;padding:3px;border-radius:12px;background:linear-gradient(135deg,#1a4d73,#041023 24%,#0a1e3a 68%,#165582);border:1px solid #61b7ef;box-shadow:0 0 0 2px rgba(34,127,222,.09),0 0 17px rgba(33,135,230,.36),0 0 35px rgba(4,77,166,.22),inset 0 1px 9px rgba(117,219,255,.26)}
-.board-inner{position:relative;width:100%;height:100%;border-radius:7px;overflow:hidden;border:1px solid rgba(85,166,232,.38);background:#040b17;touch-action:none}
+/* Standard installed-web-app viewport. No iPhone model checks, screen.height sizing,
+   old 64px guard, or per-device calibration/viewport "lock". The system owns its chrome. */
+.shell{
+  height:100vh;height:100dvh;min-height:0;width:100%;max-width:720px;
+  margin:0 auto;position:relative;isolation:isolate;overflow:hidden;
+  display:grid;grid-template-rows:auto minmax(0,1fr);
+  gap:clamp(10px,1.5dvh,18px);
+  padding:max(10px,env(safe-area-inset-top,0px))
+          max(10px,env(safe-area-inset-right,0px))
+          max(10px,env(safe-area-inset-bottom,0px))
+          max(10px,env(safe-area-inset-left,0px));
+}
+/* Installed Home Screen mode may overlay system status icons even when its
+   safe-area variable incorrectly reports zero. Keep score cards clear, without
+   stretching or locking the viewport or detecting any particular phone. */
+@media (display-mode:standalone) and (orientation:portrait){
+  .shell{padding-top:max(56px,env(safe-area-inset-top,0px))}
+}
+.scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1.7vw,11px);width:min(100%,580px);margin:0 auto;min-height:0}
+.stat{min-width:0;min-height:clamp(61px,8.6dvh,80px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;border-radius:15px;padding:9px 4px;background:linear-gradient(153deg,rgba(16,46,78,.96),rgba(4,13,31,.95));border:1px solid rgba(91,180,239,.58);box-shadow:inset 0 1px 1px rgba(204,243,255,.13),0 0 17px rgba(22,128,239,.13)}
+button.stat{position:relative;border-color:#5aace3;background:linear-gradient(150deg,#17436a,#07192e)}
+button.stat:active{background:linear-gradient(150deg,#245987,#09233d);transform:scale(.987)}
+.stat-label{display:block;color:#abd4ef;letter-spacing:.17em;font-size:clamp(9px,2.45vw,12px);font-weight:850;text-transform:uppercase;line-height:1.15}
+.stat-value{display:block;font-variant-numeric:tabular-nums;font-size:clamp(21px,5.4vw,31px);line-height:1.04;font-weight:900;letter-spacing:-.035em;color:#effbff;text-shadow:0 0 16px rgba(98,211,255,.4)}
+.stat:first-child .stat-value{color:#87dfff}
+.stat .menu-chevron{position:absolute;right:8px;top:8px;color:#88c9ee;font-size:12px;line-height:1}
+.stage{min-width:0;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;overflow:hidden}
+.play-group{display:flex;align-items:stretch;gap:clamp(7px,2vw,14px);max-width:100%;min-width:0}
+.board-panel{position:relative;flex:none;width:250px;height:500px;aspect-ratio:1/2;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
+.board-inner{position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(85,166,232,.45);background:#040b17;touch-action:none}
 #board{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-.rail{width:clamp(68px,18.5vw,88px);flex:0 0 auto;display:flex;flex-direction:column;gap:6px;min-width:0}
-.preview-card{border-radius:11px;border:1px solid rgba(60,139,205,.48);padding:7px 3px 4px;background:linear-gradient(155deg,#0c2038,#050e1e);box-shadow:inset 0 1px rgba(143,216,255,.08),0 0 12px rgba(15,97,180,.11)}
-.preview-card.unavailable{opacity:.57}
-.preview-label{display:block;text-align:center;font-size:clamp(8px,2vw,10px);color:#91c4e7;text-transform:uppercase;font-weight:850;letter-spacing:.11em}
-.preview-card canvas{display:block;width:100%;height:auto;aspect-ratio:1.2/1;margin:1px auto 0}
-.preview-card.hold-box{border-color:rgba(86,174,236,.64)}
-.overlay{position:absolute;inset:0;z-index:6;background:rgba(0,5,15,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-.overlay-title{text-align:center;font-size:clamp(18px,4vw,24px);font-weight:850;letter-spacing:.12em;color:#e6f7ff;text-shadow:0 0 16px #398bcc}
-.play-btn{border:1px solid #92dbff;background:linear-gradient(140deg,#1666a3,#0c3b70);color:#eefaff;font-size:13px;font-weight:850;letter-spacing:.1em;border-radius:100px;padding:14px 28px;box-shadow:0 0 19px rgba(46,160,244,.38)}
+.rail{flex:0 0 clamp(79px,21vw,116px);min-width:0;max-width:116px;display:flex;flex-direction:column;justify-content:space-between;gap:clamp(9px,1.5dvh,15px)}
+.preview-card{min-width:0;min-height:108px;width:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;border-radius:14px;border:1px solid rgba(86,165,228,.7);padding:10px 4px 8px;background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 18px rgba(21,116,209,.14)}
+button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 18px rgba(55,169,244,.21)}
+button.preview-card:active{background:#164d77;transform:scale(.985)}
+.preview-card.unavailable{opacity:.55}
+.preview-label{display:block;text-align:center;font-size:clamp(9px,2.7vw,12px);color:#b1dcf6;text-transform:uppercase;font-weight:850;letter-spacing:.12em}
+.preview-card canvas{width:100%;height:auto;aspect-ratio:1.2/1;display:block}
+.preview-subtitle{font-size:clamp(8px,2.2vw,10px);font-weight:750;color:#8ab9d9;letter-spacing:.05em;text-align:center}
+.overlay{position:absolute;inset:0;z-index:6;background:rgba(0,5,15,.73);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.overlay-title{text-align:center;font-size:clamp(18px,4vw,25px);font-weight:900;letter-spacing:.13em;color:#e6f7ff;text-shadow:0 0 16px #398bcc}
+.play-btn{border:1px solid #99e1ff;background:linear-gradient(140deg,#1a76b3,#0d396b);color:#eefaff;font-size:14px;font-weight:850;letter-spacing:.11em;border-radius:100px;padding:16px 35px;box-shadow:0 0 24px rgba(46,160,244,.42)}
+.play-btn:active{transform:scale(.97);background:#1b6194}
+.gesture-hint{max-width:200px;text-align:center;color:#c0dcf3;font-size:11px;line-height:1.65;font-weight:650;letter-spacing:.03em}
 .clear-toast{position:absolute;z-index:5;left:0;right:0;top:42%;text-align:center;pointer-events:none;font-size:clamp(18px,5vw,30px);font-weight:900;letter-spacing:.04em;color:#fff8cb;text-shadow:0 0 6px #fff8cc,0 0 20px #80ddff,0 0 35px #3a9cf6;opacity:0;transform:translateY(14px) scale(.8)}
 .clear-toast.show{animation:toast-rise .76s ease-out forwards}
 @keyframes toast-rise{0%{opacity:0;transform:translateY(12px) scale(.7)}16%{opacity:1;transform:translateY(0) scale(1.13)}65%{opacity:1}100%{opacity:0;transform:translateY(-25px) scale(1)}}
-.controls{width:min(100%,540px);margin:0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;min-height:0}
-.ctrl{min-width:0;height:clamp(45px,6.8dvh,61px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:12px;background:linear-gradient(145deg,#122e4a,#071527);border:1px solid #326a9b;box-shadow:inset 0 1px rgba(171,229,255,.16),0 0 9px rgba(28,123,203,.13)}
-.ctrl .symbol{font-size:clamp(21px,6.2vw,29px);line-height:1;color:#eaf9ff;text-shadow:0 0 9px rgba(104,215,255,.46);font-weight:700}
-.ctrl .name{font-size:clamp(7px,1.85vw,9px);letter-spacing:.055em;font-weight:850;color:#a2c6e1}
-.ctrl.hard,.ctrl.hold-control{background:linear-gradient(150deg,#16446d,#09223f);border-color:#489ad1}
-.ctrl:active,.ctrl.pressed,.action:active,.play-btn:active{background:#1a5e95;transform:scale(.97);box-shadow:inset 0 0 9px rgba(110,218,255,.19),0 0 15px rgba(27,132,235,.19)}
-.actions{width:min(100%,540px);margin:0 auto;display:grid;grid-template-columns:1fr 1.18fr 1fr;gap:6px;min-height:0}
-.action{height:clamp(37px,4.8dvh,43px);min-width:0;padding:2px 3px;border:1px solid rgba(83,156,212,.5);border-radius:10px;background:linear-gradient(150deg,#0d2945,#07192e);font-size:clamp(10px,2.45vw,12px);font-weight:780;color:#cbe7f8}
-.action.pause{color:#edfbff;background:linear-gradient(145deg,#104a7b,#092c50);border-color:#4aa9e0}
-.dialog{position:fixed;z-index:15;inset:0;padding:20px;display:flex;align-items:center;justify-content:center;background:rgba(0,3,11,.85);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.dialog-card{width:min(100%,350px);padding:21px 18px;border-radius:17px;text-align:center;border:1px solid #3b87bb;background:linear-gradient(155deg,#102843,#060f1e);box-shadow:0 0 48px rgba(15,109,195,.25)}
-.dialog-card h2{font-size:20px;margin:0 0 11px}.dialog-card p{font-size:13px;line-height:1.6;margin:0;color:#b2d0e7}
-.dialog-actions{display:flex;gap:8px;margin-top:19px}.dialog-actions button{flex:1;border:1px solid #3d7eaa;border-radius:10px;background:#0a2d50;padding:12px 7px;font-size:12px;font-weight:800}.dialog-actions .confirm{border-color:#80daff;background:#12649b}
-/* Existing Home Screen icons may retain old status-bar geometry until reinstall. */
-@media(max-width:350px){.shell{padding-left:5px;padding-right:5px;gap:5px}.stage{gap:5px}.rail{width:64px}.preview-card{padding:5px 2px 3px}.controls{gap:4px}.actions{gap:4px}.ctrl{border-radius:9px}.action{font-size:9px}}
-@media(max-height:760px){.shell{gap:4px}.stat{padding:3px 2px}.stat-label{font-size:8px}.stat-value{font-size:17px}.ctrl{height:43px}.ctrl .symbol{font-size:19px}.action{height:34px}.preview-card{padding:3px 2px 2px}.rail{gap:4px}}
+/* One modal contains both the paused options and the placeholder Challenges page. */
+.menu-screen{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:rgba(1,7,19,.87);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.menu-card{position:relative;width:min(100%,390px);max-height:100%;overflow:auto;border:1px solid #69c1f7;border-radius:22px;padding:27px 19px 22px;background:linear-gradient(150deg,#153c66,#061328 79%);box-shadow:0 0 0 2px rgba(25,119,214,.11),0 0 52px rgba(20,133,238,.25)}
+.menu-title{margin:0 48px 6px;text-align:center;color:#e8f8ff;font-size:clamp(21px,5.3vw,27px);letter-spacing:.13em;font-weight:900}
+.menu-note{text-align:center;font-size:12px;line-height:1.5;color:#a0c8e6;margin:0 0 21px}
+.menu-buttons{display:grid;gap:11px}
+.menu-choice{width:100%;min-height:54px;border-radius:13px;border:1px solid rgba(89,179,242,.75);background:linear-gradient(145deg,#164775,#0c294c);font-size:14px;letter-spacing:.035em;font-weight:820;text-align:left;padding:13px 17px;box-shadow:inset 0 1px rgba(196,238,255,.12)}
+.menu-choice:active{background:#236093}
+.menu-choice.secondary{background:linear-gradient(145deg,#102d4e,#081d34)}
+.menu-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;color:#e6f6ff;font-size:23px;font-weight:550}
+.menu-back{position:absolute;left:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;font-size:21px}
+.challenge-empty{height:clamp(190px,36dvh,300px);border:1px dashed rgba(92,172,224,.3);border-radius:14px;margin-top:23px;background:radial-gradient(ellipse at center,#15305555,#07112222)}
+@media(max-width:360px){.shell{gap:8px}.stage{gap:6px}.rail{flex-basis:76px}.preview-card{padding:7px 2px;min-height:95px}.stat{min-height:57px}.stat-label{font-size:9px}.stat-value{font-size:21px}}
+@media(max-height:670px){.shell{gap:6px}.stat{min-height:52px;padding:5px 3px}.stat-value{font-size:20px}.rail{gap:6px}.preview-card{min-height:83px;padding:6px 2px}.menu-card{padding-top:18px}}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
-</style>
+</style></style>
 </head>
 <body>
+
 <main class="shell" aria-label="Glow Stack block puzzle">
   <section class="scorebar" aria-label="Game statistics">
-    <div class="stat"><span class="stat-label">Level</span><strong class="stat-value" id="level">1</strong></div>
+    <button class="stat" type="button" id="levelButton" aria-haspopup="dialog" aria-controls="menuScreen" aria-label="Level and game options">
+      <span class="menu-chevron" aria-hidden="true">☰</span>
+      <span class="stat-label">Level</span><strong class="stat-value" id="level">1</strong>
+    </button>
     <div class="stat"><span class="stat-label">Score</span><strong class="stat-value" id="score">0</strong></div>
     <div class="stat"><span class="stat-label">Best</span><strong class="stat-value" id="best">0</strong></div>
   </section>
   <section class="stage" aria-label="Game board and block previews">
+    <div class="play-group">
     <div class="board-panel">
       <div class="board-inner">
-        <canvas id="board" width="300" height="600" role="img" aria-label="Game board with 10 columns and 20 rows. Tap to rotate, drag to move, swipe up to rotate."></canvas>
+        <canvas id="board" width="300" height="600" role="img" aria-label="Tetris game board. Drag side to side to move, tap to rotate, drag downward to lower a piece, or flick downward to drop it."></canvas>
         <div class="clear-toast" id="clearToast" aria-live="off" aria-hidden="true"></div>
         <div class="overlay" id="overlay">
           <span class="overlay-title" id="overlayTitle" hidden></span>
           <button type="button" id="playButton" class="play-btn">PLAY</button>
+          <span class="gesture-hint">Drag to move · Tap to rotate<br>Swipe down to drop</span>
         </div>
       </div>
     </div>
-    <aside class="rail" aria-label="Held block and next two blocks">
-      <div class="preview-card hold-box" id="holdBox"><span class="preview-label">Hold</span><canvas id="held" width="120" height="100" aria-label="Held block preview"></canvas></div>
-      <div class="preview-card"><span class="preview-label">Next 1</span><canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas></div>
-      <div class="preview-card"><span class="preview-label">Next 2</span><canvas id="nextTwo" width="120" height="100" aria-label="Second upcoming block preview"></canvas></div>
+    <aside class="rail" aria-label="Next piece and held piece">
+      <div class="preview-card"><span class="preview-label">Next</span><canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas></div>
+      <button class="preview-card hold-box" id="holdBox" type="button" aria-label="Hold or swap current piece" title="Hold or swap piece">
+        <span class="preview-label">Hold</span><canvas id="held" width="120" height="100" aria-hidden="true"></canvas><span class="preview-subtitle">TAP TO SWAP</span>
+      </button>
     </aside>
+    </div>
   </section>
-  <section class="controls" aria-label="Game controls">
-    <button class="ctrl hold-control" type="button" data-action="hold" aria-label="Hold or swap block" title="Hold or swap block (C)"><span class="symbol">▣</span><span class="name">HOLD</span></button>
-    <button class="ctrl" type="button" data-action="left" aria-label="Move left" title="Move left (←)"><span class="symbol">←</span><span class="name">LEFT</span></button>
-    <button class="ctrl" type="button" data-action="rotate" aria-label="Rotate block" title="Rotate (↑ or X)"><span class="symbol">↻</span><span class="name">ROTATE</span></button>
-    <button class="ctrl" type="button" data-action="right" aria-label="Move right" title="Move right (→)"><span class="symbol">→</span><span class="name">RIGHT</span></button>
-    <button class="ctrl" type="button" data-action="down" aria-label="Soft drop" title="Soft drop (↓)"><span class="symbol">↓</span><span class="name">DOWN</span></button>
-    <button class="ctrl hard" type="button" data-action="hard" aria-label="Instant drop" title="Instant drop (Space)"><span class="symbol">⇣</span><span class="name">DROP</span></button>
+  <section class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
+    <div class="menu-card">
+      <button class="menu-back" id="menuBack" type="button" aria-label="Back to options" hidden>←</button>
+      <button class="menu-close" id="menuClose" type="button" aria-label="Close menu and resume game">×</button>
+      <h2 class="menu-title" id="menuTitle">OPTIONS</h2>
+      <div id="optionsPage">
+        <p class="menu-note">Game paused while this menu is open</p>
+        <div class="menu-buttons">
+          <button class="menu-choice" type="button" id="restartButton">↻ &nbsp; Restart Level</button>
+          <button class="menu-choice" type="button" id="resetButton">⟲ &nbsp; Restart at Level 1</button>
+          <button class="menu-choice secondary" type="button" id="challengesButton">◇ &nbsp; Challenges</button>
+        </div>
+      </div>
+      <div id="challengesPage" hidden aria-label="Challenges page">
+        <div class="challenge-empty" aria-label="Challenges area is empty"></div>
+      </div>
+    </div>
   </section>
-  <section class="actions" aria-label="Game options">
-    <button class="action pause" type="button" id="pauseButton">Ⅱ Pause</button>
-    <button class="action" type="button" id="restartButton">↻ Restart level</button>
-    <button class="action" type="button" id="resetButton">⟲ Level 1</button>
-  </section>
+</main>
 </main>
 <script>
 (()=>{'use strict';
@@ -112,10 +149,11 @@ const SHAPES={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,
 const COLORS={I:'#62efff',O:'#ffcd79',T:'#c1a0ff',S:'#69edc2',Z:'#ff718c',J:'#7199ff',L:'#ffad75'};
 const names=Object.keys(SHAPES), $=id=>document.getElementById(id);
 const canvas=$('board'),ctx=canvas.getContext('2d',{alpha:false});
-const previews=[$('held'),$('nextOne'),$('nextTwo')].map(el=>el.getContext('2d'));
+const previews=[$('held'),$('nextOne')].map(el=>el.getContext('2d'));
 let board,active,queue=[],bag=[],held=null,holdUsed=false,score=0,best=0,level=1,lines=0;
 let checkpointScore=0,checkpointLines=0,status='ready',fallTime=0,lockTime=0,lockResets=0,saveTime=0,lastFrame=0;
 let effect=null,particles=[],effectTime=0;
+let menuOpen=false,menuWasPlaying=false;
 const blank=()=>Array.from({length:H},()=>Array(W).fill(null));
 const validName=n=>typeof n==='string'&&Object.prototype.hasOwnProperty.call(SHAPES,n);
 function bagShuffle(){const a=names.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -173,12 +211,13 @@ function lockPiece(){if(!active)return;
 // Endless progression: beginner-friendly through level 20, faster only at advanced levels.
 function interval(lvl){return lvl<=20?1500-(lvl-1)*(680/19):Math.max(125,820*Math.pow(.965,lvl-20))}
 function begin(){if(status==='over')fresh();if(status==='ready'||status==='paused'){status=effect?'clearing':'playing';fallTime=0;lastFrame=performance.now();refresh();save()}}
-function pause(){if(status==='playing'||status==='clearing'){status='paused';refresh();save()}else if(status==='paused'||status==='ready')begin()}
+function pause(){if(menuOpen)closeMenu();else openMenu()}
 function refresh(){
   $('level').textContent=level.toLocaleString();$('score').textContent=score.toLocaleString();$('best').textContent=best.toLocaleString();
   $('holdBox').classList.toggle('unavailable',holdUsed);
-  $('pauseButton').textContent=(status==='playing'||status==='clearing')?'Ⅱ Pause':status==='ready'?'▶ Start':'▶ Resume';
-  $('overlay').hidden=status==='playing'||status==='clearing';$('overlayTitle').hidden=status==='ready';
+  $('holdBox').setAttribute('aria-disabled',String(holdUsed||status!=='playing'));
+  $('overlay').hidden=status==='playing'||status==='clearing';
+  $('overlayTitle').hidden=status==='ready';
   if(status==='ready')$('playButton').textContent='PLAY';
   else if(status==='paused'){$('overlayTitle').textContent='PAUSED';$('playButton').textContent='RESUME'}
   else if(status==='over'){$('overlayTitle').textContent='GAME OVER';$('playButton').textContent='PLAY AGAIN'}
@@ -233,7 +272,7 @@ function drawPreview(c,name){c.clearRect(0,0,120,100);if(!validName(name))return
   const m=SHAPES[name],size=23,ox=(120-m[0].length*size)/2,oy=(100-m.length*size)/2;
   c.save();c.translate(ox,oy);m.forEach((row,y)=>row.forEach((on,x)=>{if(on)cell(c,x,y,size,COLORS[name])}));c.restore();
 }
-function drawPreviews(){drawPreview(previews[0],held);drawPreview(previews[1],queue[0]);drawPreview(previews[2],queue[1])}
+function drawPreviews(){drawPreview(previews[0],held);drawPreview(previews[1],queue[0])}
 function save(){try{localStorage.setItem(STORE,JSON.stringify({board,active,queue,bag,held,holdUsed,score,best,level,lines,checkpointScore,checkpointLines,status:status==='playing'?'paused':status}));localStorage.setItem(BEST,String(best))}catch(_){}}
 function load(){try{
   best=Math.max(0,Number(localStorage.getItem(BEST))||0,...OLD_BEST.map(k=>Number(localStorage.getItem(k))||0));
@@ -267,17 +306,9 @@ function frame(t){const dt=Math.max(0,Math.min(70,t-(lastFrame||t)));lastFrame=t
   requestAnimationFrame(frame);
 }
 function perform(which){if(which==='left')move(-1);else if(which==='right')move(1);else if(which==='rotate')rotate();else if(which==='down')softDrop();else if(which==='hard')hardDrop();else if(which==='hold')hold()}
-let repeatStart=null,repeatLoop=null,pressed=null;
-function stopRepeat(){clearTimeout(repeatStart);clearInterval(repeatLoop);repeatStart=null;repeatLoop=null;if(pressed){pressed.classList.remove('pressed');pressed=null}}
-document.querySelectorAll('[data-action]').forEach(btn=>{
-  btn.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();stopRepeat();pressed=btn;
-    try{btn.setPointerCapture(e.pointerId)}catch(_){}btn.classList.add('pressed');const a=btn.dataset.action;perform(a);
-    if(a==='left'||a==='right'||a==='down')repeatStart=setTimeout(()=>{repeatLoop=setInterval(()=>perform(a),a==='down'?65:82)},215);
-  },{passive:false});
-  ['pointerup','pointercancel','lostpointercapture'].forEach(k=>btn.addEventListener(k,stopRepeat));
-  btn.addEventListener('click',e=>{if(e.detail===0)perform(btn.dataset.action)});
-});
-// On-screen gestures: tap to rotate, slide horizontally, drag down to soft-drop,
+// The board handles all movement; Hold is the single dedicated touch button.
+$('holdBox').addEventListener('click',hold);
+// On-screen gestures:// On-screen gestures: tap to rotate, slide horizontally, drag down to soft-drop,
 // swipe up to rotate; a quick strong downward flick instantly drops.
 let touch=null;
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(status!=='playing')return;
@@ -312,115 +343,80 @@ document.addEventListener('keydown',e=>{
   if(map[e.key]){e.preventDefault();if(!e.repeat||['left','right','down'].includes(map[e.key]))perform(map[e.key])}
   else if(e.key==='z'||e.key==='Z'){e.preventDefault();if(!e.repeat)rotate(-1)}
   else if(e.key==='p'||e.key==='P'||e.key==='Escape'){e.preventDefault();if(!e.repeat)pause()}
-  else if(e.key==='Enter'&&status!=='playing'&&e.target.tagName!=='BUTTON'){e.preventDefault();begin()}
+  else if(e.key==='Enter'&&!menuOpen&&status!=='playing'&&e.target.tagName!=='BUTTON'){e.preventDefault();begin()}
 });
 $('playButton').addEventListener('click',begin);
-// Pointer-down actions are more dependable on standalone iOS home-screen PWAs.
-// Keyboard-triggered clicks retain access through the click fallback.
-function bindButton(id,fn){
-  const b=$(id);b.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();fn()},{passive:false});
-  b.addEventListener('click',e=>{if(e.detail===0)fn()});
+
+function openMenu(){
+  if(menuOpen)return;
+  menuWasPlaying=status==='playing'||status==='clearing';
+  menuOpen=true;
+  if(menuWasPlaying){status='paused';refresh();save()}
+  showMenuPage('options');
+  $('menuScreen').hidden=false;
+  $('menuClose').focus({preventScroll:true});
 }
-bindButton('pauseButton',pause);
-bindButton('restartButton',()=>{stopRepeat();touch=null;fresh(level,checkpointScore,checkpointLines);begin()});
-bindButton('resetButton',()=>{stopRepeat();touch=null;fresh();begin()});
-document.addEventListener('visibilitychange',()=>{stopRepeat();touch=null;if(document.hidden&&(status==='playing'||status==='clearing')){status='paused';refresh();save()}});
+function showMenuPage(page){
+  $('menuTitle').textContent=page==='challenges'?'CHALLENGES':'OPTIONS';
+  $('optionsPage').hidden=page!=='options';
+  $('challengesPage').hidden=page!=='challenges';
+  $('menuBack').hidden=page!=='challenges';
+}
+function closeMenu(resume=true){
+  if(!menuOpen)return;
+  menuOpen=false;$('menuScreen').hidden=true;
+  if(resume&&menuWasPlaying&&status==='paused')begin();
+  menuWasPlaying=false;
+  $('levelButton').focus({preventScroll:true});
+}
+$('levelButton').addEventListener('click',openMenu);
+$('menuClose').addEventListener('click',()=>closeMenu());
+$('menuBack').addEventListener('click',()=>showMenuPage('options'));
+$('challengesButton').addEventListener('click',()=>showMenuPage('challenges'));
+$('restartButton').addEventListener('click',()=>{
+  closeMenu(false);
+  touch=null;fresh(level,checkpointScore,checkpointLines);begin();
+});
+$('resetButton').addEventListener('click',()=>{
+  closeMenu(false);
+  touch=null;fresh();begin();
+});
+// A hidden Home Screen app should not keep playing in the background.
+document.addEventListener('visibilitychange',()=>{
+  touch=null;
+  if(document.hidden&&(status==='playing'||status==='clearing')){
+    status='paused';refresh();save();
+  }
+});
 window.addEventListener('pagehide',save);
-// IMPORTANT: never use screen.height or fixed root positioning here.
-// A separate viewport synchronization below may set --app-height, but ONLY
-// from actual usable viewport measurements, never physical screen height.
-// CSS Grid reserves both button rows before sizing the game board.
+// The board follows the stage that CSS makes available. No viewport override,
+// status bar mode switch, physical screen.height or forced device dimensions.
 function fit(){
-  const stage=document.querySelector('.stage'),panel=document.querySelector('.board-panel'),rail=document.querySelector('.rail');
+  const stage=document.querySelector('.stage');
+  const panel=document.querySelector('.board-panel');
+  const rail=document.querySelector('.rail');
+  const group=document.querySelector('.play-group');
+  const gap=parseFloat(getComputedStyle(group).columnGap)||8;
   const sw=stage.clientWidth,sh=stage.clientHeight,rw=rail.getBoundingClientRect().width;
   if(!sw||!sh||!rw)return;
-  // Always derive a 10×20 playfield from the CURRENT stage size; don't let
-  // any stale pixel height from an earlier screen orientation control it.
-  const width=Math.max(1,Math.min(400,Math.floor((sh-2)/2),Math.floor(sw-rw-8)));
+  const width=Math.max(1,Math.floor(Math.min(520,(sh-4)/2,sw-rw-gap-3)));
   panel.style.width=width+'px';panel.style.height=width*2+'px';
 }
-// Work inside the web VIEWPORT, never inside the larger physical screen:
-// iOS can reserve an inaccessible strip at the bottom of an installed app.
-const root=document.documentElement;
-const isIPhone=/iPhone/.test(navigator.userAgent);
-// Old Home Screen icons can overlap the status bar; newer opaque icons may
-// already reserve it. Both are valid, so allow a persistent in-app choice.
-const topFitKey='glow-stack-top-fit-v1';
-let topFit='protected';
-try{if(localStorage.getItem(topFitKey)==='native')topFit='native'}catch(_){}
-function syncViewport(){
-  const vv=window.visualViewport;
-  const sizes=[window.innerHeight,document.documentElement.clientHeight,vv?.height]
-    .filter(n=>Number.isFinite(n)&&n>0);
-  if(sizes.length)root.style.setProperty('--app-height',Math.floor(Math.min(...sizes))+'px');
-  const standalone=navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
-  root.classList.toggle('ios-home-portrait',isIPhone&&standalone&&window.innerHeight>=window.innerWidth&&topFit==='protected');
-  fit();
-}
-let viewportFitPending=false;
-function scheduleViewport(){
-  if(viewportFitPending)return;
-  viewportFitPending=true;
-  requestAnimationFrame(()=>{viewportFitPending=false;syncViewport()});
+let fitScheduled=false;
+function scheduleFit(){
+  if(fitScheduled)return;
+  fitScheduled=true;
+  requestAnimationFrame(()=>{fitScheduled=false;fit()});
 }
 if(window.ResizeObserver){
-  const obs=new ResizeObserver(()=>requestAnimationFrame(fit));
+  const obs=new ResizeObserver(scheduleFit);
   obs.observe(document.querySelector('.stage'));
 }
-window.addEventListener('resize',scheduleViewport);
-window.addEventListener('pageshow',scheduleViewport);
-window.addEventListener('orientationchange',()=>{scheduleViewport();setTimeout(scheduleViewport,250)});
-window.visualViewport?.addEventListener('resize',scheduleViewport);
-window.visualViewport?.addEventListener('scroll',scheduleViewport);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleViewport()});
-// Double-tap the LEVEL stat to switch between protected and native status bar
-// clearance. This changes visual layout only and saves an independent setting.
-let lastLevelTap=0;
-document.querySelector('.scorebar .stat:first-child').addEventListener('click',()=>{
-  const now=performance.now();
-  if(lastLevelTap&&now-lastLevelTap<600){
-    topFit=topFit==='protected'?'native':'protected';
-    try{localStorage.setItem(topFitKey,topFit)}catch(_){}
-    lastLevelTap=0;
-    syncViewport();
-    const note=document.createElement('div');
-    note.textContent=topFit==='protected'?'Top clearance: Protected':'Top clearance: Compact';
-    note.style.cssText='position:fixed;z-index:80;top:40%;left:50%;transform:translateX(-50%);white-space:nowrap;background:#0a2746ed;color:#effaff;border:1px solid #74c8fa;border-radius:12px;padding:11px 14px;font:600 13px system-ui;pointer-events:none';
-    document.body.appendChild(note);
-    setTimeout(()=>note.remove(),1200);
-  }else lastLevelTap=now;
-});
-// Optional layout readout: ?layout-debug=1 in Safari, or this function via Web Inspector.
-function layoutReport(){
-  const probe=document.createElement('div');
-  probe.style.cssText='position:absolute;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
-  document.body.appendChild(probe);
-  const safe=getComputedStyle(probe),shell=getComputedStyle(document.querySelector('.shell'));
-  const report={
-    screen:[screen.width,screen.height],
-    inner:[innerWidth,innerHeight],
-    document:[document.documentElement.clientWidth,document.documentElement.clientHeight],
-    visual:window.visualViewport?[window.visualViewport.width,window.visualViewport.height]:null,
-    insets:[safe.paddingTop,safe.paddingRight,safe.paddingBottom,safe.paddingLeft],
-    padding:[shell.paddingTop,shell.paddingRight,shell.paddingBottom,shell.paddingLeft],
-    shellHeight:shell.height,
-    standalone:navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches,
-    iPhoneProtected:root.classList.contains('ios-home-portrait'),topFitMode:topFit
-  };
-  probe.remove();return report;
-}
-window.glowStackLayoutReport=layoutReport;
-if(new URLSearchParams(location.search).has('layout-debug')){
-  const report=document.createElement('pre');
-  report.setAttribute('aria-label','Viewport diagnostics');
-  report.style.cssText='position:fixed;z-index:90;top:40%;left:8px;right:8px;max-height:55%;overflow:auto;pointer-events:none;white-space:pre-wrap;color:#fff;background:#071424ee;border:1px solid #75c9ff;border-radius:8px;padding:10px;font:12px/1.4 monospace';
-  document.body.appendChild(report);
-  const update=()=>{report.textContent=JSON.stringify(layoutReport(),null,2)};
-  window.addEventListener('resize',update);
-  window.visualViewport?.addEventListener('resize',update);
-  setTimeout(update,100);
-}
-if(!load())fresh();refresh();syncViewport();requestAnimationFrame(frame);
+window.addEventListener('resize',scheduleFit);
+window.addEventListener('pageshow',scheduleFit);
+window.addEventListener('orientationchange',scheduleFit);
+window.visualViewport?.addEventListener('resize',scheduleFit);
+if(!load())fresh();refresh();fit();requestAnimationFrame(frame);
 })();
 </script>
 </body>

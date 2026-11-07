@@ -1,40 +1,49 @@
-# Glow Stack — iPhone viewport / Dynamic Island repair (v10)
+# Glow Stack — touch-first Home Screen game
 
-The game is a single-page falling-block puzzle. This release changes **layout only**; gameplay, scoring, hold, controls, and existing `localStorage` save keys are untouched.
+Glow Stack is a neon 10×20 falling-block puzzle. This version is a **full-screen, touch-focused redesign** inspired by the clean proportions in the supplied mobile-game reference. Its own LED/neon colors, particles, scoring, progression and existing save keys remain intact.
 
-## What we found
+## Main screen
 
-- The screenshot showed the Level / Score / Best cards drawn **behind the iPhone status indicators**. The app previously depended on `env(safe-area-inset-top)`, which can incorrectly report `0px` in certain installed iPhone WebKit configurations.
-- The screenshot's unusually dark band under the controls matches a separate iOS Home Screen viewport bug: `innerHeight` / `visualViewport.height` can be about one status-bar height less than `screen.height`. **No website can draw into pixels the OS excludes from the web viewport.** Do not try to stretch the game to `screen.height` — that cuts off the controls.
-- Apple's documented `black-translucent` mode draws behind the status bar. The source now omits the legacy status-bar-style meta so **new installations** use a system-managed bar; old Home Screen icons may retain their original install-time chrome.
+- **Level / Score / Best** are the only stats at the top. Tap **Level** to open a pause-and-options menu.
+- The game board takes the remaining available space. There is **no bottom control strip**.
+- **Hold** is a large tap target with a live held-piece preview. You can swap once per falling piece, as before.
+- Only **Next** is shown; the second next-piece preview was removed.
+- Start/Resume remains a button overlay on the game board when the game has not started or is already paused.
 
-## Layout changes
+## How to play without buttons
 
-1. Reserve **at least 64 CSS px at the top** for portrait installed iPhone apps, even when WebKit incorrectly reports a zero top safe-area inset. Normal Safari and landscape are not forced into that clearance. Where iOS already reserves a status-bar area, this conservative rule can produce extra top space; it prioritizes avoiding obscured scores on existing icons.
-2. Drive the grid from the smallest usable page viewport measurement (`innerHeight`, `documentElement.clientHeight`, `visualViewport.height`) rather than physical `screen.height`, while respecting the bottom Home-indicator inset.
-3. Re-fit the 10×20 board after rotations, page visibility changes and Visual Viewport changes. Both button rows keep their grid space; the game board shrinks when necessary.
-4. Removed an inappropriate 70 px minimum board width for exceptionally small viewports.
-5. Added optional **`?layout-debug=1`** diagnostic readout; normal gameplay is unchanged. In Safari Web Inspector you can also call `glowStackLayoutReport()` to read screen, viewport, safe-area and shell measurements.
+- **Drag left or right** anywhere on the board to move your current piece.
+- **Tap the board** or **swipe up** to rotate.
+- **Drag down** to soft-drop, or **flick down quickly** to hard-drop.
+- **Tap Hold** to store or swap the falling piece.
+- Keyboard arrow keys, Space, C and P/Escape remain available on desktop.
 
-## One-tap calibration for differently installed iPhones
+## Level menu
 
-Some iPhones already reserve top status-bar space; older installed icons can instead paint the clock over the game. When the app is installed on the Home Screen in portrait mode, the default is **Protected** (64px top guard) to keep score cards visible. If a newly installed icon instead shows too much empty space above Level / Score / Best, **double-tap the LEVEL score card** to switch to **Compact** spacing. Double-tap LEVEL again to restore **Protected**. A brief label confirms the choice. The preference is stored separately from game scores, and normal game controls do not change.
+Tap the **Level** stat. The current game pauses and the menu opens:
 
-## Testing
+1. **Restart Level** — restart the current level from its saved level checkpoint.
+2. **Restart at Level 1** — begin a new level-one run.
+3. **Challenges** — opens a deliberately empty placeholder page (with Back and X).
 
-A browser geometry regression test is provided in `tests/test_iphone_layout.py`. Run with Python + Playwright installed and a Chromium browser available:
+Tap **X** to close the options/challenges menu and **automatically resume the game if it was playing before the menu opened**. If you were on the initial Start screen, closing the menu keeps the game ready rather than starting unexpectedly.
 
-```bash
+## Display behavior
+
+This version **removes the old iPhone-specific 64px JavaScript guard, device detection, manual sizing calibration, synthetic viewport height and button rows**. It uses CSS `100dvh`, `viewport-fit=cover`, standard `env(safe-area-inset-*)`, and a conservative 56px top clearance **only in portrait standalone app mode**, preventing the score bar from overlapping status icons if the system reports zero top inset. The extra space stays inside the viewport: it does not stretch the game into an unexposed bottom strip. The `manifest.webmanifest` declares a standalone app.
+
+**Hardware limitation:** iOS controls the clock/status icons and may reserve a system area outside the webpage. A website cannot hide the iPhone's Dynamic Island or reclaim pixels that the installed web view does not expose, even if a native game can. The dark app background is designed to blend into the system area where supported. Older installed Home Screen icons may retain their original launch-mode settings.
+
+## Testing and deploying
+
+The Playwright test `tests/test_iphone_layout.py` exercises 9 geometry configurations (including shortened viewports and simulated safe insets), tests the Level pause/resume flow, Challenges navigation, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+
+You can run locally with Python + Playwright/Chromium:
+
+```sh
 python tests/test_iphone_layout.py
 ```
 
-It covers portrait sizes for iPhone 15 (393×852), 15 Pro Max (430×932) and 16 Pro Max (440×956), plus viewport-shortened versions (height minus approximately 59–62 px), landscape and a narrow-screen case. Browser emulation **cannot reproduce iPhone Home Screen WebKit bugs exactly**. Real-device verification is still required.
+After the new `main` build deploys on GitHub Pages, fully close and reopen the Home Screen game. The saved game keys `glow-stack-save-v3` and `glow-stack-best-v3` have **not** changed. Don't clear website data or delete an existing Home Screen icon just to refresh it: that could erase locally stored scores.
 
-## Installing / refreshing safely
-
-1. Merge the pull request into `main` and wait for GitHub Pages to publish.
-2. Open the deployed link in Safari and reload it.
-3. Fully close the installed game from the app switcher, reopen it, and check the Level / Score / Best row and both control rows.
-4. If the old Home Screen icon still uses an overlapping status bar or shows a system-controlled bottom band, compare with a **newly added Home Screen icon**. Do not delete the original icon or clear Safari website data first: these actions can cause loss of stored game progress or best score. An icon added earlier may preserve different status-bar configuration.
-
-WebKit references: [bug 313800](https://bugs.webkit.org/show_bug.cgi?id=313800) (unexposed lower strip); [bug 317153](https://bugs.webkit.org/show_bug.cgi?id=317153) (status-bar installation behavior). Apple: [Supported Meta Tags](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html).
+Device emulation is useful but does not replace testing in an installed Home Screen app on an actual iPhone.
