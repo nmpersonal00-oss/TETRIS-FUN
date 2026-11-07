@@ -780,7 +780,16 @@ function fit(){
   // (1:1.86 instead of 1:2) fills narrow phone screens more completely without
   // changing collisions, piece rotation, movement or canvas coordinates.
   const displayRatio=1.86;
-  const width=Math.max(1,Math.floor(Math.min(540,sw-2,(sh-2)/displayRatio)));
+  // On newly installed iPhones that already reserve the clock/status bar,
+  // restoring the top area freed vertical space. The old height-first fit
+  // then enlarged the board to almost 100% screen width. That made the
+  // game look zoomed in. Keep the comfortable ~86% phone-width board
+  // from the layout the couple liked, without adding blank top padding.
+  // Edge-to-edge standalone and ordinary browser layouts keep their
+  // established sizing, including the husband's Dynamic Island fix.
+  const preInsetPortrait=document.documentElement.classList.contains('ios-viewport-already-inset')&&sw<sh;
+  const comfortableWidth=preInsetPortrait&&sw>=360?sw*.86:sw-2;
+  const width=Math.max(1,Math.floor(Math.min(540,sw-2,comfortableWidth,(sh-2)/displayRatio)));
   panel.style.width=width+'px';panel.style.height=width*displayRatio+'px';
   hold.style.width=width+'px';
 }
