@@ -31,9 +31,24 @@ Tap the **Level** stat. The current game pauses and the menu opens:
 1. **Restart Level** — restart the current level from its saved level checkpoint.
 2. **Restart at Level 1** — begin a new level-one run.
 3. **Leaderboard** — shared online ranking featuring a neon trophy and, for each player, **username, highest-ever score, and current level**. Scores determine first and second place.
-4. **Challenges** — shows both players' current levels and best scores as a progress comparison, with future challenge activities still marked "coming soon".
+4. **Challenges** — choose a playable mode (Line Ladder, Sprint 40, Score Climb or No-Hold Trial), continue its separately saved levels, or return to Classic Marathon. The original shared player-level comparison remains below the choices.
 
 Tap **X** to close the options/challenges menu and **automatically resume the game if it was playing before the menu opened**. If you were on the initial Start screen, closing the menu keeps the game ready rather than starting unexpectedly.
+
+## Gentle level speed and playable challenges
+
+**Gravity:** Every five *completed* levels, falling pieces move just 2% faster. Levels 1–5 take 1500 ms per row, 6–10 take 1470 ms, 11–15 take roughly 1441 ms, and 16–20 take roughly 1412 ms per row. The interval never drops below 1100 ms, even at very high levels. The regular 10-lines-per-level progression remains unchanged.
+
+Open **Level → Challenges** and select one of these independent modes:
+
+- **Line Ladder**: an endless game that gains a level for each 5 lines cleared.
+- **Sprint 40**: clear 40 lines total in four 10-line stages. A running clock measures the attempt and stops on completion; pause and backgrounding stop the clock.
+- **Score Climb**: finish five successive score targets (100, 250, 500, 900 and 1400 points). The last goal completes the challenge.
+- **No-Hold Trial**: clear 50 lines in five stages, with Hold disabled only during this mode.
+
+All challenges support Restart Level and Restart at Level 1, and keep separate local saves so you can switch modes without overwriting Classic Marathon progress. The board displays a small objective/progress label during challenges. Select **Classic Marathon** in the same menu to return to the original game.
+
+**Leaderboard protection:** The shared Supabase ranking and your saved Best reflect only Classic Marathon. Challenge-specific levels and points are kept local to the device and never submitted to Supabase. Challenge mode changes do not create authentication accounts or alter login sessions.
 
 ## Display behavior
 
@@ -47,12 +62,13 @@ The 300×600 canvas is displayed at its native 1:2 ratio, keeping each of the 10
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises iPhone 15/16, Pro Max, compact phones, Samsung devices, installed-app mode, landscape, shortened viewports, iOS pre-inset/full-bleed modes, and dynamic viewport resize. It validates square cells, board/hold alignment, safe-area handling, menus, gestures, and leaderboard mocks. **All Playwright pages block outbound network requests**; tests do not create production anonymous accounts or modify Supabase data. GitHub Actions uploads screenshots for visual inspection.
+The network-blocked tests `tests/test_iphone_layout.py` and `tests/test_challenges.py` exercise challenge objectives, mode switching, speed steps, completion and persistence alongside iPhone 15/16, Pro Max, compact phones, Samsung devices, installed-app mode, landscape, shortened viewports, iOS pre-inset/full-bleed modes, and dynamic viewport resize. It validates square cells, board/hold alignment, safe-area handling, menus, gestures, and leaderboard mocks. **All Playwright pages block outbound network requests**; tests do not create production anonymous accounts or modify Supabase data. GitHub Actions uploads screenshots for visual inspection.
 
 You can run locally with Python + Playwright/Chromium:
 
 ```sh
 python tests/test_iphone_layout.py
+python tests/test_challenges.py
 ```
 
 After the new `main` build deploys on GitHub Pages, fully close and reopen the Home Screen game. The saved game keys `glow-stack-save-v3` and `glow-stack-best-v3` have **not** changed. Don't clear website data or delete an existing Home Screen icon just to refresh it: that could erase locally stored scores.
