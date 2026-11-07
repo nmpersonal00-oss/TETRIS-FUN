@@ -43,11 +43,12 @@ button.stat:active{background:linear-gradient(150deg,#245987,#09233d);transform:
 .stat-value{display:block;font-variant-numeric:tabular-nums;font-size:clamp(21px,5.4vw,31px);line-height:1.04;font-weight:900;letter-spacing:-.035em;color:#effbff;text-shadow:0 0 16px rgba(98,211,255,.4)}
 .stat:first-child .stat-value{color:#87dfff}
 .stat .menu-chevron{position:absolute;right:8px;top:8px;color:#88c9ee;font-size:12px;line-height:1}
-.stage{min-width:0;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;gap:clamp(7px,2vw,14px);overflow:hidden}
+.stage{min-width:0;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;overflow:hidden}
+.play-group{display:flex;align-items:stretch;gap:clamp(7px,2vw,14px);max-width:100%;min-width:0}
 .board-panel{position:relative;flex:none;width:250px;height:500px;aspect-ratio:1/2;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
 .board-inner{position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(85,166,232,.45);background:#040b17;touch-action:none}
 #board{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-.rail{flex:0 0 clamp(79px,21vw,116px);min-width:0;max-width:116px;display:flex;flex-direction:column;gap:clamp(9px,1.5dvh,15px)}
+.rail{flex:0 0 clamp(79px,21vw,116px);min-width:0;max-width:116px;display:flex;flex-direction:column;justify-content:space-between;gap:clamp(9px,1.5dvh,15px)}
 .preview-card{min-width:0;min-height:108px;width:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;border-radius:14px;border:1px solid rgba(86,165,228,.7);padding:10px 4px 8px;background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 18px rgba(21,116,209,.14)}
 button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 18px rgba(55,169,244,.21)}
 button.preview-card:active{background:#164d77;transform:scale(.985)}
@@ -92,6 +93,7 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
     <div class="stat"><span class="stat-label">Best</span><strong class="stat-value" id="best">0</strong></div>
   </section>
   <section class="stage" aria-label="Game board and block previews">
+    <div class="play-group">
     <div class="board-panel">
       <div class="board-inner">
         <canvas id="board" width="300" height="600" role="img" aria-label="Tetris game board. Drag side to side to move, tap to rotate, drag downward to lower a piece, or flick downward to drop it."></canvas>
@@ -103,12 +105,13 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
         </div>
       </div>
     </div>
-    <aside class="rail" aria-label="Hold and next piece">
+    <aside class="rail" aria-label="Next piece and held piece">
+      <div class="preview-card"><span class="preview-label">Next</span><canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas></div>
       <button class="preview-card hold-box" id="holdBox" type="button" aria-label="Hold or swap current piece" title="Hold or swap piece">
         <span class="preview-label">Hold</span><canvas id="held" width="120" height="100" aria-hidden="true"></canvas><span class="preview-subtitle">TAP TO SWAP</span>
       </button>
-      <div class="preview-card"><span class="preview-label">Next</span><canvas id="nextOne" width="120" height="100" aria-label="Next block preview"></canvas></div>
     </aside>
+    </div>
   </section>
   <section class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
     <div class="menu-card">
@@ -386,7 +389,8 @@ function fit(){
   const stage=document.querySelector('.stage');
   const panel=document.querySelector('.board-panel');
   const rail=document.querySelector('.rail');
-  const gap=parseFloat(getComputedStyle(stage).columnGap)||8;
+  const group=document.querySelector('.play-group');
+  const gap=parseFloat(getComputedStyle(group).columnGap)||8;
   const sw=stage.clientWidth,sh=stage.clientHeight,rw=rail.getBoundingClientRect().width;
   if(!sw||!sh||!rw)return;
   const width=Math.max(1,Math.floor(Math.min(520,(sh-4)/2,sw-rw-gap-3)));
