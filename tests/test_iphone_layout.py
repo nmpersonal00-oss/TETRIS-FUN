@@ -235,14 +235,37 @@ def run():
                 disabled_page.locator("#leaderboardButton").click()
                 disabled_page.locator("#playerNameInput").fill("Wifey")
                 disabled_page.locator("#savePlayerButton").click()
-                disabled_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('One-time setup needed')")
+                disabled_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Supabase is rejecting anonymous sign-ins')")
                 status=disabled_page.locator("#boardStatus").inner_text()
                 assert "Authentication" in status and "Providers" in status, status
-                assert "No email or password needed" in status, status
+                assert "reload that settings page" in status, status
                 assert disabled_page.locator("#playerNameInput").input_value()=="Wifey","Name lost after error"
                 print("PASS anonymous provider disabled | actionable setup message, name retained")
             finally:
                 disabled_page.close()
+            # CAPTCHA-required errors must not be mistaken for a disabled provider.
+            captcha_page=browser.new_page(viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                captcha_page.set_content(HTML)
+                captcha_page.evaluate("""() => {
+                  window.supabase={createClient:()=>({
+                    auth:{
+                      getSession:async()=>({data:{session:null},error:null}),
+                      signInAnonymously:async()=>({data:{session:null},error:{code:'captcha_failed',message:'Captcha verification required for anonymous signup'}})
+                    }
+                  })}
+                }""")
+                captcha_page.locator("#levelButton").click()
+                captcha_page.locator("#leaderboardButton").click()
+                captcha_page.locator("#playerNameInput").fill("Wifey")
+                captcha_page.locator("#savePlayerButton").click()
+                captcha_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('requires CAPTCHA')")
+                captcha_status=captcha_page.locator("#boardStatus").inner_text()
+                assert "Authentication" in captcha_status and "Protection" in captcha_status, captcha_status
+                assert "sign-ins are disabled" not in captcha_status, captcha_status
+                print("PASS captcha required | distinct guidance without false provider-disabled claim")
+            finally:
+                captcha_page.close()
             assert not errors,errors
         finally:
             browser.close()

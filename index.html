@@ -439,10 +439,25 @@ function setBoardStatus(message,isError=false){
 function leaderboardError(e){
   if(!e)return 'Could not connect to leaderboard.';
   const msg=String(e.message||e);
-  if(/anonymous|not enabled|signup.*disabled/i.test(msg))return 'One-time setup needed: enable Anonymous Sign-Ins in Wifey & Hubby → Supabase Authentication → Providers, then tap Save Name again. No email or password needed.';
-  if(/duplicate|unique|23505/i.test(msg))return 'That name is already taken. Choose another name.';
-  if(/network|failed to fetch/i.test(msg))return 'Connection unavailable. Scores will refresh when online.';
-  return msg.slice(0,140);
+  const code=String(e.code||'').toLowerCase();
+  // Prefer Supabase's structured Auth error codes over broad word matches.
+  // "anonymous" in an error can refer to a CAPTCHA challenge, NOT a
+  // disabled anonymous provider. Keep the two cases distinct.
+  if(code==='anonymous_provider_disabled'||/anonymous sign-ins? (are |is )?disabled/i.test(msg)){
+    return 'Supabase is rejecting anonymous sign-ins. In Wifey & Hubby → Authentication → Providers, switch on Anonymous Sign-Ins, SAVE, reload that settings page to verify it stayed on, then try Save Name again.';
+  }
+  if(/captcha|turnstile|hcaptcha|bot protection/i.test(code+' '+msg)){
+    return 'Supabase requires CAPTCHA, but this game does not yet show a CAPTCHA challenge. The game needs a CAPTCHA integration before registration can work. Check Authentication → Protection.';
+  }
+  if(code==='signup_disabled'||/signups? (are |is )?disabled/i.test(msg)){
+    return 'Supabase signup is disabled. Check project Authentication → Providers and signup settings.';
+  }
+  if(/duplicate|unique|23505/i.test(code+' '+msg))return 'That name is already taken. Choose another name.';
+  if(/network|failed to fetch|fetch failed/i.test(code+' '+msg))return 'Connection unavailable. Try again when connected to the internet.';
+  if(/rate.?limit|too many requests/i.test(code+' '+msg))return 'Too many sign-in attempts. Wait before trying again.';
+  // If Supabase returns an unfamiliar error, show what it actually said,
+  // rather than claiming the user needs to enable a provider.
+  return 'Supabase: '+msg.slice(0,190)+(code?' ['+code.slice(0,45)+']':'');
 }
 async function initializeLeaderboard(){
   if(lbClient&&lbUser)return;
