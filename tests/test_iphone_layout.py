@@ -50,7 +50,8 @@ def run():
                       return {shell:rect('.shell'),score:rect('.scorebar'),
                               stage:rect('.stage'),board:rect('.board-panel'),
                               rail:rect('.rail'),hold:rect('#holdBox'),
-                              next:rect('#nextOne'),viewport:[innerWidth,innerHeight]};
+                              next:rect('#nextOne'),nextCard:rect('.rail .preview-card:first-child'),
+                              viewport:[innerWidth,innerHeight]};
                     }""")
                     board, stage, rail = (metrics[k] for k in ("board","stage","rail"))
                     assert not page.locator(".controls").count(), (name,"old controls present")
@@ -61,7 +62,8 @@ def run():
                     assert board["top"] >= stage["top"]-1 and board["bottom"] <= stage["bottom"]+1, (name,"board vertical clipping",metrics)
                     assert board["left"] >= stage["left"]-1 and board["right"] < rail["left"], (name,"board overlapping Hold/Next",metrics)
                     assert abs(board["height"]-board["width"]*2)<1, (name,"board aspect ratio",metrics)
-                    assert metrics["hold"]["bottom"] < metrics["next"]["top"]+metrics["next"]["height"], (name,"previews missing",metrics)
+                    assert abs(metrics["nextCard"]["top"]-board["top"]) < 3, (name,"Next should align with top of board",metrics)
+                    assert abs(metrics["hold"]["bottom"]-board["bottom"]) < 3, (name,"Hold should align with bottom of board",metrics)
                     if inset: assert metrics["score"]["top"] >= 62,(name,"safe area not respected",metrics)
 
                     # Start, pause by tapping Level, enter empty Challenges,
