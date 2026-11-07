@@ -1,0 +1,10 @@
+{
+  "name": "Glow Stack",
+  "short_name": "Glow Stack",
+  "description": "Neon touch-first block stacking puzzle",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#02050c",
+  "theme_color": "#07152b"
+}
