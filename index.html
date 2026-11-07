@@ -130,6 +130,18 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .challenge-numbers{display:grid;gap:3px;text-align:right;flex:0 0 auto;font-size:11px;color:#9dbed9}
 .challenge-numbers strong{color:#82e4ff;font-size:15px}
 .challenge-empty{display:grid;place-items:center;color:#87b4d3;font-weight:800;letter-spacing:.035em;font-size:11px;text-align:center;padding:14px}
+.challenge-picker{display:grid;gap:8px;margin:10px 0 15px}
+.challenge-option{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;min-height:53px;padding:8px 10px;border-radius:12px;border:1px solid #397aa7;background:linear-gradient(130deg,#133c61,#091e38);width:100%}
+.challenge-option[aria-pressed="true"]{border-color:#8fe4ff;box-shadow:inset 0 0 0 1px rgba(143,228,255,.3)}
+.challenge-option strong{display:block;font-size:12px;line-height:1.3;letter-spacing:.02em}
+.challenge-option small{display:block;margin-top:3px;font-size:10px;line-height:1.3;color:#acd1e8}
+.challenge-option-action{flex:0 0 auto;color:#8ce1ff;font-size:10px;font-weight:900;letter-spacing:.06em}
+.challenge-select-note{font-size:11px;color:#acd1e8;line-height:1.5;margin:0 0 7px}
+.challenge-live{color:#bce9ff;font-size:11px;font-weight:800;margin-bottom:8px}
+.challenge-hud{position:absolute;z-index:4;left:6px;bottom:6px;max-width:calc(100% - 12px);pointer-events:none;padding:4px 7px;border-radius:7px;border:1px solid rgba(118,209,255,.4);background:rgba(2,11,27,.85);font-size:10px;font-weight:850;line-height:1.25;color:#e1faff;text-shadow:0 1px 4px #000}
+.challenge-hud strong{display:block;color:#84e2ff;font-size:11px}
+.challenge-hud span{display:block}
+.challenge-hud[hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
 </style>
 </head>
@@ -152,6 +164,7 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
     <div class="board-panel">
       <div class="board-inner">
         <canvas id="board" width="300" height="600" role="img" aria-label="Tetris game board. Drag side to side to move, tap to rotate, drag downward to lower a piece, or flick downward to drop it."></canvas>
+        <div class="challenge-hud" id="challengeHud" aria-live="off" hidden><strong id="challengeHudTitle"></strong><span id="challengeHudGoal"></span></div>
         <div class="clear-toast" id="clearToast" aria-live="off" aria-hidden="true"></div>
         <div class="overlay" id="overlay">
           <span class="overlay-title" id="overlayTitle" hidden></span>
@@ -182,10 +195,18 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
         </div>
       </div>
       <div id="challengesPage" hidden aria-label="Challenges page">
+        <p class="challenge-select-note">Pick a challenge to play. Each has its own levels and saved progress. Your normal game and shared Best score stay separate.</p>
+        <div id="challengeSelectionStatus" class="challenge-live">Classic Marathon is active</div>
+        <div class="challenge-picker" aria-label="Choose a challenge">
+          <button class="challenge-option" type="button" data-game-mode="lines" aria-pressed="false"><span><strong>LINE LADDER</strong><small>Clear 5 lines per level · endless</small></span><span class="challenge-option-action">PLAY</span></button>
+          <button class="challenge-option" type="button" data-game-mode="sprint" aria-pressed="false"><span><strong>SPRINT 40</strong><small>4 stages · clear 40 lines · beat your time</small></span><span class="challenge-option-action">PLAY</span></button>
+          <button class="challenge-option" type="button" data-game-mode="score" aria-pressed="false"><span><strong>SCORE CLIMB</strong><small>5 stages · reach rising score goals</small></span><span class="challenge-option-action">PLAY</span></button>
+          <button class="challenge-option" type="button" data-game-mode="nohold" aria-pressed="false"><span><strong>NO-HOLD TRIAL</strong><small>5 stages · clear 50 lines without Hold</small></span><span class="challenge-option-action">PLAY</span></button>
+          <button class="challenge-option" type="button" data-game-mode="marathon" aria-pressed="true"><span><strong>CLASSIC MARATHON</strong><small>Return to your regular game and leaderboard</small></span><span class="challenge-option-action">PLAY</span></button>
+        </div>
         <div class="challenge-heading">CURRENT LEVELS</div>
         <div id="challengeStatus" class="board-status" role="status" aria-live="polite">Loading levels…</div>
         <ol id="challengeProgressList" class="challenge-progress" aria-label="Player level comparison"></ol>
-        <div class="challenge-empty" aria-label="Future challenges">More challenges coming soon</div>
       </div>
       <div id="leaderboardPage" class="leaderboard-page" hidden aria-label="Shared leaderboard">
         <div class="trophy-hero"><img src="./assets/neon-trophy.svg" alt="Gold and cyan neon trophy with glowing blocks">
