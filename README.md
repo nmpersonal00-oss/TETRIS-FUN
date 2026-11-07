@@ -2,6 +2,12 @@
 
 Glow Stack is a neon 10×20 falling-block puzzle. This version is a **full-screen, touch-focused redesign** inspired by the clean proportions in the supplied mobile-game reference. Its own LED/neon colors, particles, scoring, progression and existing save keys remain intact.
 
+## Home Screen and Chromebook app icon
+
+The owner-supplied pink/purple glowing block-and-star image is used as the app icon. It keeps the neon rounded ring and original background, with a restrained ~1.5% crop around the outside to make the ring more prominent. The website declares a 180px Apple Home Screen icon, a 32px browser favicon, and 192px and 512px web-app icons for Chromium/ChromeOS. When the artwork source changes, GitHub Actions generates and commits the platform PNGs automatically.
+
+**Important:** The icon update does not alter authentication, your two leaderboard records, or any other Supabase app. Wait until the owner finishes the separate account-cleanup plan before intentionally deleting/reinstalling the two Home Screen apps, since deleting them can lose their anonymous login identities.
+
 ## Main screen
 
 - **Level / Score / Best / Next** share one compact top strip. Tap **Level** to open the pause-and-options menu.
