@@ -35,6 +35,12 @@ button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
           max(10px,env(safe-area-inset-bottom,0px))
           max(10px,env(safe-area-inset-left,0px));
 }
+/* Installed Home Screen mode may overlay system status icons even when its
+   safe-area variable incorrectly reports zero. Keep score cards clear, without
+   stretching or locking the viewport or detecting any particular phone. */
+@media (display-mode:standalone) and (orientation:portrait){
+  .shell{padding-top:max(56px,env(safe-area-inset-top,0px))}
+}
 .scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1.7vw,11px);width:min(100%,580px);margin:0 auto;min-height:0}
 .stat{min-width:0;min-height:clamp(61px,8.6dvh,80px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;border-radius:15px;padding:9px 4px;background:linear-gradient(153deg,rgba(16,46,78,.96),rgba(4,13,31,.95));border:1px solid rgba(91,180,239,.58);box-shadow:inset 0 1px 1px rgba(204,243,255,.13),0 0 17px rgba(22,128,239,.13)}
 button.stat{position:relative;border-color:#5aace3;background:linear-gradient(150deg,#17436a,#07192e)}
