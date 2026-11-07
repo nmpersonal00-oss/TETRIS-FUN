@@ -186,10 +186,14 @@ def run():
                 mock_page.set_content(HTML)
                 mock_page.evaluate("""() => {
                   window.__players=[{user_id:'husband',username:'Hubby',best_score:500,current_level:4}];
+                  window.__anonymousSignIns=0;
                   window.supabase={createClient:()=>({
                     auth:{
                       getSession:async()=>({data:{session:null},error:null}),
-                      signInAnonymously:async()=>({data:{session:{user:{id:'wife'}}},error:null})
+                      signInAnonymously:async()=>{
+                        window.__anonymousSignIns++;
+                        return {data:{session:{user:{id:'wife'}}},error:null};
+                      }
                     },
                     from:()=>({
                       filter:null,updated:null,
@@ -219,9 +223,13 @@ def run():
                 mock_page.locator("#levelButton").click()
                 mock_page.locator("#leaderboardButton").click()
                 assert mock_page.locator(".trophy-hero strong").inner_text()=="TETRIS CHAMPIONS","Leaderboard title incorrect"
+                mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('tap Save Name')")
+                assert mock_page.evaluate("window.__anonymousSignIns")==0,"Opening Leaderboard created an unwanted anonymous account"
+                assert mock_page.locator("#leaderboardList .board-person").count()==0,"New player should have no registered identity"
                 mock_page.locator("#playerNameInput").fill("Wifey")
                 mock_page.locator("#savePlayerButton").click()
                 mock_page.wait_for_function("() => document.querySelector('#boardStatus').textContent.includes('Playing as Wifey')")
+                assert mock_page.evaluate("window.__anonymousSignIns")==1,"Saving a name should create exactly one anonymous account"
                 assert mock_page.locator("#leaderboardList .board-person").all_inner_texts()==["Hubby","Wifey"],"Initial ranking failed"
                 assert mock_page.locator("#leaderboardList .board-player-level").all_inner_texts()==["LEVEL 4","LEVEL 1"],"Player levels missing from leaderboard"
                 assert mock_page.locator("#leaderboardList .board-points").all_inner_texts()==["500","0"],"Best scores missing from leaderboard"
@@ -242,6 +250,7 @@ def run():
                 assert mock_page.locator("#challengeProgressList .challenge-player").all_inner_texts()==["Wifey","Hubby"],"Challenges should compare both players"
                 assert mock_page.locator("#challengeProgressList .challenge-numbers strong").all_inner_texts()==["LEVEL 6","LEVEL 4"],"Challenges does not show current levels"
                 assert "Best 800" in mock_page.locator("#challengeProgressList").inner_text(),"Challenges should show best score"
+                assert mock_page.evaluate("window.__anonymousSignIns")==1,"Browsing Challenges must not add anonymous accounts"
                 mock_page.locator("#menuClose").click()
                 assert is_hidden(mock_page,"#menuScreen"),"Challenges could not close"
                 print("PASS shared leaderboard mock | no-email username setup, best scores and current levels in both views")
