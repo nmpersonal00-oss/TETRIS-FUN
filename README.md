@@ -1,25 +1,25 @@
-# Glow Stack — iPhone Home Screen layout repair (v8)
+# Glow Stack — iPhone safe-area visibility (v9)
 
-This build fixes **the actual installed Home Screen app**. The game itself and its saved-game format are unchanged.
+This is a **layout-only** update for the iPhone version of Glow Stack. The Tetris game logic, side previews, on-screen button positions, touch gestures, and local save keys remain unchanged.
 
-## What changed (layout only)
+## Layout adjustments
 
-- Replaced `apple-mobile-web-app-status-bar-style=black-translucent` with `black`. iOS now reserves the status bar instead of trying to draw the game under it. Apple's WebKit developers have deprecated `black-translucent` for Home Screen apps; it has caused reported viewport-height errors.
-- Removed the JavaScript calculation that stretched the game to `screen.height` (the source of clipped Restart Level and Level 1 buttons).
-- Removed fixed-root sizing; the CSS grid uses the **usable viewport** and allocates the two control rows *before* sizing the board.
-- Kept the safe-area padding for the bottom Home indicator, with a minimum margin if iOS reports an inset of zero.
-- Kept game mechanics, touch behavior, scoring, animations, saved scores, and pause/restart controls exactly as before.
+- The Level / Score / Best row now respects `env(safe-area-inset-top)`, so it stays below the Dynamic Island and clock when a Home Screen app renders under the iPhone status bar.
+- Removed the standalone-only CSS rule that overrode the top safe-area padding with just `8px`. An icon installed while an older `black-translucent` status bar was in effect can keep those launch settings even after the site changes.
+- Reduced the *minimum* bottom padding from 16px to 8px to avoid adding an unnecessary strip, while still honoring `env(safe-area-inset-bottom)` for the Home indicator.
+- Kept the grid and board-fitting logic that reserve space for the six game controls and three action buttons.
 
-## Upload to GitHub Pages
+## Updating the iPhone game
 
-1. Extract the ZIP. In your existing `nmpersonal00-oss/TETRIS-FUN` repository, upload `index.html`, `README.md`, and `.nojekyll` to the repository root, replacing existing files.
-2. Commit and let Pages redeploy. Force-close Glow Stack from the iPhone app switcher and open the Home Screen icon again.
-3. **Do not delete the installed icon or clear its website data to refresh the game**: locally stored game scores can be lost. If the app keeps showing the previous layout, first check the deployed site using Safari as a separate step, then return to the installed app. Reinstall only after backing up any game data you need.
+1. Merge the pull request into `main` and allow GitHub Pages to deploy it.
+2. Open the hosted game in Safari and reload to check the new layout.
+3. Fully close the installed Home Screen app from the app switcher and open it again to check its layout.
+4. **Don't clear Safari website data or delete the installed app just to refresh.** Doing so may erase locally stored progress and best scores. Old Home Screen icons can retain install-time status-bar settings; if only the installed icon remains misaligned, back up any scores you need before considering a fresh Home Screen installation.
 
-### Why this specific change?
+## What the web page cannot fix
 
-Apple documents that `black` status-bar style displays content **below** the status bar, while `black-translucent` paints content beneath it. WebKit has documented an installed PWA bug where the viewport is shortened by the status-bar height, causing an unreachable bottom strip. Increasing the web page height to match physical `screen.height` pushes the controls outside the app's actual viewport. The fix is to stop using the physical height and let the OS reserve the status bar.
+Some iOS versions show a black/empty band at the physical bottom of standalone Home Screen apps, *outside the viewport exposed to web pages*. The game cannot draw or place buttons in an area iOS doesn't expose. This patch removes excess bottom padding from the page, but cannot guarantee removal of an iOS-managed strip. See [WebKit bug 313800](https://bugs.webkit.org/show_bug.cgi?id=313800).
 
-### Testing limitation
+## Testing
 
-Desktop browser tests reproduce layout dimensions and control interaction but **cannot emulate the iPhone's Home Screen WebKit shell precisely**. Please check this version on your iPhones after deploying. The old files remain available in GitHub history for a fast rollback.
+The CSS can be inspected and checked in desktop/mobile emulation, but iPhone Home Screen status-bar behavior must be checked on the actual device; Safari tabs can behave differently from installed icons.
