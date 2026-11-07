@@ -38,7 +38,15 @@ def two_line_setup(page, mode, lines=0, score=0, level=1):
       snap.status='paused';
       localStorage.setItem(key,JSON.stringify(snap));
     }""", {"key": PREFIX + mode, "lines": lines, "score": score, "level": level})
+    # The app saves its in-memory board on pagehide. Prevent that one
+    # cleanup event from replacing the prepared fixture during test reload.
+    page.evaluate("""() => window.addEventListener(
+      'pagehide', event => event.stopImmediatePropagation(),
+      {capture:true, once:true}
+    )""")
     page.reload()
+    prepared=slot(page,mode)
+    assert prepared["board"][19][0]=="T" and prepared["lines"]==lines,("Fixture did not survive reload",prepared)
     page.locator("#playButton").click()
     page.keyboard.press("Space")
     page.wait_for_timeout(250)
