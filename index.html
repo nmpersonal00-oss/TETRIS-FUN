@@ -484,11 +484,19 @@ function drawPreview(c,name){
   c.restore();
 }
 function drawPreviews(){drawPreview(previews[0],held);drawPreview(previews[1],queue[0])}
-function save(){try{localStorage.setItem(STORE,JSON.stringify({board,active,queue,bag,held,holdUsed,score,best,level,lines,checkpointScore,checkpointLines,status:status==='playing'?'paused':status}));localStorage.setItem(BEST,String(best))}catch(_){}}
+function save(){try{
+  localStorage.setItem(MODE_STORE,mode);
+  localStorage.setItem(saveSlot(),JSON.stringify({
+    board,active,queue,bag,held,holdUsed,score,best,level,lines,
+    checkpointScore,checkpointLines,challengeElapsedMs,checkpointElapsedMs,
+    status:status==='playing'||status==='clearing'?'paused':status
+  }));
+  if(mode==='marathon')localStorage.setItem(BEST,String(best));
+}catch(_){}}
 function load(){try{
   best=Math.max(0,Number(localStorage.getItem(BEST))||0,...OLD_BEST.map(k=>Number(localStorage.getItem(k))||0));
-  let data=JSON.parse(localStorage.getItem(STORE)||'null'),migrated=false;
-  if(!data){for(const k of OLD_SAVES){data=JSON.parse(localStorage.getItem(k)||'null');if(data){migrated=true;break}}}
+  let data=JSON.parse(localStorage.getItem(saveSlot())||'null'),migrated=false;
+  if(mode==='marathon'&&!data){for(const k of OLD_SAVES){data=JSON.parse(localStorage.getItem(k)||'null');if(data){migrated=true;break}}}
   if(!data||!Array.isArray(data.board)||data.board.length!==H||!data.board.every(r=>Array.isArray(r)&&r.length===W&&r.every(v=>v===null||validName(v)))||!data.active||!validName(data.active.name))return false;
   board=data.board;active=data.active;
   if(!Array.isArray(active.shape)||active.shape.length<1||active.shape.length>4||!active.shape.every(r=>Array.isArray(r)&&r.length>=1&&r.length<=4&&r.every(v=>v===0||v===1))||!Number.isInteger(active.x)||!Number.isInteger(active.y)||collide(active.shape,active.x,active.y))return false;
@@ -499,11 +507,18 @@ function load(){try{
   lines=Number.isSafeInteger(Number(data.lines))?Math.max(0,Number(data.lines)):0;
   checkpointScore=Math.max(0,Number(data.checkpointScore??data.levelCheckpointScore)||0);
   checkpointLines=Math.max(0,Number(data.checkpointLines)||((level-1)*10));
-  best=Math.max(best,score,Number(data.best)||0);
-  status=data.status==='over'?'over':data.status==='ready'?'ready':'paused';fallTime=0;lockTime=0;lockResets=0;
+  challengeElapsedMs=Number.isFinite(Number(data.challengeElapsedMs))?Math.max(0,Number(data.challengeElapsedMs)):0;
+  checkpointElapsedMs=Number.isFinite(Number(data.checkpointElapsedMs))?Math.max(0,Number(data.checkpointElapsedMs)):0;
+  if(mode==='marathon')best=Math.max(best,score,Number(data.best)||0);
+  status=data.status==='over'?'over':data.status==='won'?'won':data.status==='ready'?'ready':'paused';
+  fallTime=0;lockTime=0;lockResets=0;effect=null;particles=[];
   if(migrated)save();return true;
 }catch(_){return false}}
 function frame(t){const dt=Math.max(0,Math.min(70,t-(lastFrame||t)));lastFrame=t;
+  if(mode==='sprint'&&(status==='playing'||status==='clearing')){
+    challengeElapsedMs+=dt;
+    if(t-lastHudTick>=150){lastHudTick=t;updateChallengeHud()}
+  }
   if(status==='playing'){
     if(grounded()){lockTime+=dt;if(lockTime>=700){lockPiece();refresh()}}
     else{lockTime=0;fallTime+=dt;const rate=interval(level);if(fallTime>=rate){fallTime-=rate;if(!collide(active.shape,active.x,active.y+1)){active.y++;draw()}}}
@@ -740,7 +755,7 @@ async function saveLeaderboardName(){
   finally{$('savePlayerButton').disabled=false}
 }
 function queueLeaderboardScore(){
-  if(lbSyncPending||!lbUsername||!lbClient||!lbUser)return;
+  if(isChallenge()||lbSyncPending||!lbUsername||!lbClient||!lbUser)return;
   lbSyncPending=true;
   // Coalesce rapid score and level changes. One request at a time prevents an
   // older level update arriving after a newer one and overwriting the record.
@@ -790,6 +805,7 @@ function openMenu(){
 }
 function showMenuPage(page){
   $('menuTitle').textContent=page==='challenges'?'CHALLENGES':page==='leaderboard'?'LEADERBOARD':'OPTIONS';
+  if(page==='challenges')renderChallengeChoices();
   $('optionsPage').hidden=page!=='options';
   $('challengesPage').hidden=page!=='challenges';
   $('leaderboardPage').hidden=page!=='leaderboard';
@@ -812,6 +828,19 @@ $('levelButton').addEventListener('click',openMenu);
 $('menuClose').addEventListener('click',()=>closeMenu());
 $('menuBack').addEventListener('click',()=>showMenuPage('options'));
 $('challengesButton').addEventListener('click',()=>showMenuPage('challenges'));
+document.querySelectorAll('[data-game-mode]').forEach(button=>button.addEventListener('click',()=>{
+  const choice=button.dataset.gameMode;
+  if(choice!=='marathon'&&!CHALLENGES[choice])return;
+  closeMenu(false);
+  touch=null;
+  if(choice!==mode){
+    save(); // Preserve the previous mode before loading this mode's own slot.
+    mode=choice;
+    try{localStorage.setItem(MODE_STORE,mode)}catch(_){}
+    if(!load())fresh();
+  }
+  begin();
+}));
 $('leaderboardButton').addEventListener('click',()=>showMenuPage('leaderboard'));
 $('savePlayerButton').addEventListener('click',()=>{void saveLeaderboardName()});
 $('playerNameInput').addEventListener('keydown',e=>{
@@ -819,7 +848,7 @@ $('playerNameInput').addEventListener('keydown',e=>{
 });
 $('restartButton').addEventListener('click',()=>{
   closeMenu(false);
-  touch=null;fresh(level,checkpointScore,checkpointLines);begin();
+  touch=null;fresh(level,checkpointScore,checkpointLines,checkpointElapsedMs);begin();
 });
 $('resetButton').addEventListener('click',()=>{
   closeMenu(false);
@@ -866,6 +895,7 @@ window.addEventListener('resize',scheduleFit);
 window.addEventListener('pageshow',scheduleFit);
 window.addEventListener('orientationchange',scheduleFit);
 window.visualViewport?.addEventListener('resize',scheduleFit);
+try{const savedMode=localStorage.getItem(MODE_STORE);if(CHALLENGES[savedMode])mode=savedMode}catch(_){}
 if(!load())fresh();refresh();fit();requestAnimationFrame(frame);
 })();
 </script>
