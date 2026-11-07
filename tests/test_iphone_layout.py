@@ -179,6 +179,43 @@ def run():
                     print(f"PASS {name} | board {board['width']:.0f} x {board['height']:.0f}; available {stage['height']:.0f}")
                 finally:
                     page.close()
+            # Freshly installed iOS Home Screen apps may ALREADY have a 62px
+            # status bar excluded from innerHeight. The old fixed 76px
+            # clearance doubled the gap and compressed the board. Make this
+            # geometry explicit instead of simulating only full-bleed phones.
+            already_inset=isolated_page(browser,
+                viewport={"width":440,"height":894},
+                screen={"width":440,"height":956},
+                is_mobile=True,has_touch=True,user_agent=UA)
+            try:
+                standalone_html=HTML.replace(
+                    "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');",
+                    "Object.defineProperty(window.navigator,'standalone',{configurable:true,value:true});"
+                    "if(window.navigator.standalone===true)document.documentElement.classList.add('ios-home-screen');"
+                )
+                assert standalone_html!=HTML,"Could not emulate installed iOS app"
+                already_inset.set_content(standalone_html)
+                already_inset.wait_for_function(
+                    "() => document.documentElement.classList.contains('ios-viewport-already-inset')"
+                )
+                dims=already_inset.evaluate("""() => ({
+                    actualDelta:screen.height-innerHeight,
+                    paddingTop:parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop),
+                    top:document.querySelector('.scorebar').getBoundingClientRect().top,
+                    boardH:document.querySelector('.board-panel').getBoundingClientRect().height,
+                    rootClass:document.documentElement.className
+                })""")
+                assert dims["actualDelta"]==62,("Invalid mock for iOS status-bar viewport",dims)
+                assert dims["paddingTop"]<=8,("Old 76px status-bar gap is still double-applied",dims)
+                assert 4<=dims["top"]<=12,("Top of viewport already below clock: must use its space",dims)
+                assert dims["boardH"]>550,("Board still squished by duplicated status bar",dims)
+                already_inset.locator("#levelButton").click()
+                assert not is_hidden(already_inset,"#menuScreen"),"Top menu button untappable after inset fix"
+                already_inset.locator("#menuClose").click()
+                assert is_hidden(already_inset,"#menuScreen"),"Menu stuck after inset fix"
+                print("PASS freshly reinstalled iOS PWA | no duplicate 62px+76px top gap")
+            finally:
+                already_inset.close()
             # Mock the Supabase network to verify actual username and ranking UI.
             # Live database RLS and SQL checks are verified separately.
             mock_page=isolated_page(browser,viewport={"width":440,"height":956},is_mobile=True,has_touch=True,user_agent=UA)
