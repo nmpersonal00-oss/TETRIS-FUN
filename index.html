@@ -23,26 +23,23 @@ body,button,canvas,.shell,.stage,.rail{user-select:none;-webkit-user-select:none
 button{font:inherit;color:inherit;touch-action:manipulation;-webkit-appearance:none;appearance:none;cursor:pointer}
 button:focus-visible{outline:2px solid #ddf8ff;outline-offset:3px}
 [hidden]{display:none!important}
-/* Standard installed-web-app viewport. No iPhone model checks, screen.height sizing,
-   old 64px guard, or per-device calibration/viewport "lock". The system owns its chrome. */
+/* Fill the page's entire usable viewport with no CSS safe-area inset padding.
+   Keep a small status-text clearance on installed portrait icons only. */
 .shell{
   height:100vh;height:100dvh;min-height:0;width:100%;max-width:720px;
   margin:0 auto;position:relative;isolation:isolate;overflow:hidden;
   display:grid;grid-template-rows:auto minmax(0,1fr) auto;
-  gap:clamp(6px,1dvh,10px);
-  padding:max(10px,env(safe-area-inset-top,0px))
-          max(10px,env(safe-area-inset-right,0px))
-          max(10px,env(safe-area-inset-bottom,0px))
-          max(10px,env(safe-area-inset-left,0px));
+  gap:clamp(3px,.45dvh,5px);
+  padding:6px 3px 3px;
 }
-/* Installed Home Screen mode may overlay system status icons even when its
-   safe-area variable incorrectly reports zero. Keep score cards clear, without
-   stretching or locking the viewport or detecting any particular phone. */
+/* Do not read iOS safe-area values: reserve only the visible clock's
+   approximate clearance on an installed portrait Home Screen icon.
+   The bottom has no reserved safe-area strip. */
 @media (display-mode:standalone) and (orientation:portrait){
-  .shell{padding-top:max(56px,env(safe-area-inset-top,0px))}
+  .shell{padding-top:49px}
 }
 /* Compact information strip: Level opens Options, Next previews only one piece. */
-.scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(72px,.92fr);align-items:stretch;gap:clamp(4px,1.25vw,8px);width:100%;max-width:670px;height:clamp(54px,6.7dvh,62px);margin:0 auto;min-width:0}
+.scorebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(72px,.92fr);align-items:stretch;gap:clamp(4px,1.25vw,8px);width:100%;max-width:670px;height:clamp(46px,5.3dvh,51px);margin:0 auto;min-width:0}
 .stat{height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;border-radius:11px;text-align:center;background:linear-gradient(153deg,rgba(16,46,78,.96),rgba(4,13,31,.95));border:1px solid rgba(91,180,239,.58);box-shadow:inset 0 1px 1px rgba(204,243,255,.13),0 0 12px rgba(22,128,239,.12)}
 button.stat{position:relative;border-color:#5aace3;background:linear-gradient(150deg,#17436a,#07192e)}
 button.stat:active{background:#20517d;transform:scale(.987)}
@@ -51,22 +48,24 @@ button.stat:active{background:#20517d;transform:scale(.987)}
 .stat:first-child .stat-value{color:#87dfff}
 .stat .menu-chevron{position:absolute;right:5px;top:5px;color:#88c9ee;font-size:10px;line-height:1}
 .stage{min-width:0;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;overflow:hidden}
-.board-panel{position:relative;flex:none;width:280px;height:560px;aspect-ratio:1/2;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
+.board-panel{position:relative;flex:none;width:280px;height:521px;aspect-ratio:1/1.86;padding:3px;border-radius:15px;background:linear-gradient(145deg,#47b7fb,#07182e 21%,#09274c 72%,#388dd4);border:1px solid #68c9ff;box-shadow:0 0 0 2px rgba(25,94,189,.18),0 0 20px rgba(33,135,230,.4),0 0 52px rgba(4,77,166,.17),inset 0 1px 9px rgba(130,226,255,.28)}
 .board-inner{position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;border:1px solid rgba(85,166,232,.45);background:#040b17;touch-action:none}
 #board{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .preview-card{min-width:0;min-height:0;border-radius:11px;border:1px solid rgba(86,165,228,.7);background:linear-gradient(155deg,#14395d,#06142b 80%);box-shadow:inset 0 1px rgba(176,234,255,.16),0 0 14px rgba(21,116,209,.13)}
 button.preview-card{border-color:#7fc9f6;box-shadow:inset 0 1px rgba(176,234,255,.2),0 0 14px rgba(55,169,244,.2)}
 button.preview-card:active{background:#164d77;transform:scale(.985)}
-.preview-card.unavailable{opacity:.55}
+.hold-box.unavailable{border-color:rgba(86,165,228,.53)}
+.hold-box.unavailable .preview-subtitle{color:#7aadd0}
+/* Keep the held tetromino at full opacity even when the swap is on cooldown. */
 .preview-label{display:block;text-align:center;font-size:clamp(8px,2vw,10px);color:#b1dcf6;text-transform:uppercase;font-weight:850;letter-spacing:.1em;line-height:1.1}
 .preview-subtitle{font-size:clamp(8px,2vw,10px);font-weight:750;color:#8ab9d9;letter-spacing:.04em;text-align:center;line-height:1.1}
-.next-top{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:100%;padding:2px;overflow:hidden}
-.next-top canvas{display:block;width:clamp(43px,11vw,54px);height:auto;aspect-ratio:6/5;margin:0 auto}
+.next-top{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;height:100%;padding:3px 2px;overflow:hidden}
+.next-top canvas{display:block;width:clamp(36px,9vw,43px);height:auto;aspect-ratio:6/5;margin:0 auto}
 .hold-strip{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;min-height:0}
-.hold-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;height:clamp(48px,6.3dvh,56px);width:min(100%,300px);padding:3px clamp(12px,4vw,18px);border-radius:12px}
+.hold-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;height:clamp(48px,5.5dvh,53px);width:min(100%,300px);padding:2px clamp(12px,4vw,18px);border-radius:12px}
 .hold-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .hold-copy .preview-label,.hold-copy .preview-subtitle{text-align:left}
-.hold-bar canvas{flex:0 0 auto;display:block;width:clamp(52px,14vw,62px);height:auto;aspect-ratio:6/5}
+.hold-bar canvas{flex:0 0 auto;display:block;width:clamp(122px,35vw,144px);height:auto;aspect-ratio:3/1}
 .overlay{position:absolute;inset:0;z-index:6;background:rgba(0,5,15,.73);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .overlay-title{text-align:center;font-size:clamp(18px,4vw,25px);font-weight:900;letter-spacing:.13em;color:#e6f7ff;text-shadow:0 0 16px #398bcc}
 .play-btn{border:1px solid #99e1ff;background:linear-gradient(140deg,#1a76b3,#0d396b);color:#eefaff;font-size:14px;font-weight:850;letter-spacing:.11em;border-radius:100px;padding:16px 35px;box-shadow:0 0 24px rgba(46,160,244,.42)}
@@ -87,8 +86,8 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .menu-close{position:absolute;right:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;color:#e6f6ff;font-size:23px;font-weight:550}
 .menu-back{position:absolute;left:13px;top:13px;display:grid;place-items:center;width:39px;height:39px;border:1px solid #538cb7;border-radius:12px;background:#092541;font-size:21px}
 .challenge-empty{height:clamp(190px,36dvh,300px);border:1px dashed rgba(92,172,224,.3);border-radius:14px;margin-top:23px;background:radial-gradient(ellipse at center,#15305555,#07112222)}
-@media(max-width:360px){.shell{gap:6px}.scorebar{height:53px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(65px,.85fr)}.stat-value{font-size:16px}.stat-label{font-size:8px}.next-top canvas{width:43px}.hold-bar{height:48px}}
-@media(max-height:670px){.shell{gap:5px}.scorebar{height:48px}.stat-value{font-size:16px}.hold-bar{height:46px}.next-top canvas{width:40px}.menu-card{padding-top:18px}}
+@media(max-width:360px){.shell{gap:3px}.scorebar{height:46px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(65px,.85fr)}.stat-value{font-size:16px}.stat-label{font-size:8px}.next-top canvas{width:36px}.hold-bar{height:48px}}
+@media(max-height:670px){.shell{gap:3px}.scorebar{height:44px}.stat-value{font-size:16px}.hold-bar{height:47px}.next-top canvas{width:36px}.menu-card{padding-top:18px}}
 @media(prefers-reduced-motion:reduce){.clear-toast.show{animation-duration:.01ms}*{transition:none!important}}
 </style></style>
 </head>
@@ -123,7 +122,7 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
   <section class="hold-strip" aria-label="Hold piece">
     <button class="preview-card hold-bar" id="holdBox" type="button" aria-label="Hold or swap current piece" title="Hold or swap piece">
       <span class="hold-copy"><span class="preview-label">Hold</span><span class="preview-subtitle">Tap to swap</span></span>
-      <canvas id="held" width="120" height="100" aria-hidden="true"></canvas>
+      <canvas id="held" width="240" height="80" aria-hidden="true"></canvas>
     </button>
   </section>
   <section class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
@@ -222,6 +221,7 @@ function pause(){if(menuOpen)closeMenu();else openMenu()}
 function refresh(){
   $('level').textContent=level.toLocaleString();$('score').textContent=score.toLocaleString();$('best').textContent=best.toLocaleString();
   $('holdBox').classList.toggle('unavailable',holdUsed);
+  $('holdBox').querySelector('.preview-subtitle').textContent=holdUsed?'WAIT FOR NEXT':'TAP TO SWAP';
   $('holdBox').setAttribute('aria-disabled',String(holdUsed||status!=='playing'));
   $('overlay').hidden=status==='playing'||status==='clearing';
   $('overlayTitle').hidden=status==='ready';
@@ -275,9 +275,18 @@ function draw(){
     active.shape.forEach((row,r)=>row.forEach((on,c)=>{if(on&&active.y+r>=0)cell(ctx,active.x+c,active.y+r,CELL,COLORS[active.name])}));
   }
 }
-function drawPreview(c,name){c.clearRect(0,0,120,100);if(!validName(name))return;
-  const m=SHAPES[name],size=23,ox=(120-m[0].length*size)/2,oy=(100-m.length*size)/2;
-  c.save();c.translate(ox,oy);m.forEach((row,y)=>row.forEach((on,x)=>{if(on)cell(c,x,y,size,COLORS[name])}));c.restore();
+function drawPreview(c,name){
+  const w=c.canvas.width,h=c.canvas.height;
+  c.clearRect(0,0,w,h);
+  if(!validName(name))return;
+  const m=SHAPES[name],rows=m.length,cols=m[0].length;
+  // Size the blocks to the actual preview surface. Hold uses a wide 240x80
+  // canvas: its piece is now legible at normal phone sizes without a taller bar.
+  const size=Math.min((w-12)/cols,(h-8)/rows);
+  const ox=(w-cols*size)/2,oy=(h-rows*size)/2;
+  c.save();c.translate(ox,oy);
+  m.forEach((row,y)=>row.forEach((on,x)=>{if(on)cell(c,x,y,size,COLORS[name])}));
+  c.restore();
 }
 function drawPreviews(){drawPreview(previews[0],held);drawPreview(previews[1],queue[0])}
 function save(){try{localStorage.setItem(STORE,JSON.stringify({board,active,queue,bag,held,holdUsed,score,best,level,lines,checkpointScore,checkpointLines,status:status==='playing'?'paused':status}));localStorage.setItem(BEST,String(best))}catch(_){}}
@@ -404,10 +413,12 @@ function fit(){
   const hold=document.querySelector('.hold-bar');
   const sw=stage.clientWidth,sh=stage.clientHeight;
   if(!sw||!sh)return;
-  // A 10 × 20 game must keep 1:2 proportions, but now uses ALL space
-  // remaining between the compact top cards and the slim Hold strip.
-  const width=Math.max(1,Math.floor(Math.min(540,sw-4,(sh-4)/2)));
-  panel.style.width=width+'px';panel.style.height=width*2+'px';
+  // The grid remains 10 columns by 20 rows. A slightly wider presentation
+  // (1:1.86 instead of 1:2) fills narrow phone screens more completely without
+  // changing collisions, piece rotation, movement or canvas coordinates.
+  const displayRatio=1.86;
+  const width=Math.max(1,Math.floor(Math.min(540,sw-2,(sh-2)/displayRatio)));
+  panel.style.width=width+'px';panel.style.height=width*displayRatio+'px';
   hold.style.width=width+'px';
 }
 let fitScheduled=false;
