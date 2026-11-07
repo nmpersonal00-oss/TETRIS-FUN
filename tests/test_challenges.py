@@ -38,7 +38,7 @@ def two_line_setup(page, mode, lines=0, score=0, level=1):
       snap.status='paused';
       localStorage.setItem(key,JSON.stringify(snap));
     }""", {"key": PREFIX + mode, "lines": lines, "score": score, "level": level})
-    page.set_content(HTML)
+    page.reload()
     page.locator("#playButton").click()
     page.keyboard.press("Space")
     page.wait_for_function("""() => {
@@ -57,9 +57,13 @@ def run():
             screen={"width":393,"height":852},
             is_mobile=True,has_touch=True,user_agent=UA,
         )
-        page.route("**/*", lambda route: route.abort())
+        # Provide a stable test-only HTTPS origin so localStorage works.
+        # All requests except the in-memory HTML document are aborted.
+        page.route("**/*", lambda route: route.fulfill(
+            status=200, content_type="text/html", body=HTML
+        ) if route.request.url=="https://glowstack.test/" else route.abort())
         try:
-            page.set_content(HTML)
+            page.goto("https://glowstack.test/")
             rates=page.evaluate("""(expr) => {
               const gravity=new Function('lvl','return '+expr);
               return [1,5,6,10,11,15,16,18,20,101].map(gravity);
@@ -90,7 +94,7 @@ def run():
             two_line_setup(page,"sprint",lines=38,level=4)
             assert page.locator("#overlayTitle").inner_text()=="CHALLENGE COMPLETE"
             assert slot(page,"sprint")["status"]=="won"
-            page.set_content(HTML)
+            page.reload()
             assert page.locator("#overlayTitle").inner_text()=="CHALLENGE COMPLETE"
             assert page.locator("#challengeHudGoal").inner_text().startswith("Completed!")
             print("PASS Sprint has four stages, completion, and saved winner state")
