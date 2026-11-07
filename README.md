@@ -5,8 +5,8 @@ Glow Stack is a neon 10×20 falling-block puzzle. This version is a **full-scree
 ## Main screen
 
 - **Level / Score / Best / Next** share one compact top strip. Tap **Level** to open the pause-and-options menu.
-- The game board takes the remaining available space. There is **no bottom control strip**.
-- **Hold** is a slim, horizontally aligned button directly underneath the board, matching the board's width and displaying the held-piece preview. You can swap once per falling piece, as before.
+- The game board stretches nearly edge to edge and uses almost all remaining vertical space. Its display is slightly wider (1:1.86 rather than 1:2), but the game still contains the original 10 columns and 20 rows. There is **no bottom control strip**.
+- **Hold** is still a slim, horizontally aligned button directly underneath the board, matching its width. The held tetromino is now rendered at a much larger scale inside a wide high-resolution preview canvas, without making the button taller. You can swap once per falling piece, as before.
 - **Next** previews exactly one upcoming piece in the top row; the old right-side rail and second preview are removed.
 - Start/Resume remains a button overlay on the game board when the game has not started or is already paused.
 
@@ -30,13 +30,13 @@ Tap **X** to close the options/challenges menu and **automatically resume the ga
 
 ## Display behavior
 
-This version **removes the old iPhone-specific 64px JavaScript guard, device detection, manual sizing calibration, synthetic viewport height and button rows**. It uses CSS `100dvh`, `viewport-fit=cover`, standard `env(safe-area-inset-*)`, and a conservative 56px top clearance **only in portrait standalone app mode**, preventing the score bar from overlapping status icons if the system reports zero top inset. The extra space stays inside the viewport: it does not stretch the game into an unexposed bottom strip. The `manifest.webmanifest` declares a standalone app.
+This version **removes the old iPhone-specific 64px JavaScript guard, device detection, manual sizing calibration, synthetic viewport height and button rows**. It uses CSS `100dvh`, `viewport-fit=cover`, and **no CSS `safe-area-inset-*` padding**. The bottom uses only 3px of ordinary padding, reclaiming the previously unused strip inside the page. A fixed 49px top clearance **only in portrait standalone app mode** keeps the score bar clear of the iPhone clock; this is not an iOS safe-area variable or JavaScript viewport lock. The `manifest.webmanifest` declares a standalone app.
 
 **Hardware limitation:** iOS controls the clock/status icons and may reserve a system area outside the webpage. A website cannot hide the iPhone's Dynamic Island or reclaim pixels that the installed web view does not expose, even if a native game can. The dark app background is designed to blend into the system area where supported. Older installed Home Screen icons may retain their original launch-mode settings.
 
 ## Testing and deploying
 
-The Playwright test `tests/test_iphone_layout.py` exercises 9 geometry configurations (including shortened viewports and simulated safe insets), validates the enlarged board, small header, and Hold bar no taller than 58px, tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
+The Playwright test `tests/test_iphone_layout.py` exercises 11 phone geometry configurations including shortened viewports and simulated installed-app top clearance; validates the widened board ratio, bottom padding no greater than 3px, compact header, Hold bar no taller than 54px, and minimum visible held-piece size. It also tests Level pause/resume, Challenges, Hold swapping and restart buttons, and produces screenshots on GitHub Actions.
 
 You can run locally with Python + Playwright/Chromium:
 
