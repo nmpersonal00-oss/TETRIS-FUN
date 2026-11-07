@@ -130,6 +130,7 @@ button.preview-card:active{background:#164d77;transform:scale(.985)}
 .challenge-numbers{display:grid;gap:3px;text-align:right;flex:0 0 auto;font-size:11px;color:#9dbed9}
 .challenge-numbers strong{color:#82e4ff;font-size:15px}
 .challenge-empty{display:grid;place-items:center;color:#87b4d3;font-weight:800;letter-spacing:.035em;font-size:11px;text-align:center;padding:14px}
+.menu-card{touch-action:pan-y;overscroll-behavior:contain}
 .challenge-picker{display:grid;gap:8px;margin:10px 0 15px}
 .challenge-option{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;min-height:53px;padding:8px 10px;border-radius:12px;border:1px solid #397aa7;background:linear-gradient(130deg,#133c61,#091e38);width:100%}
 .challenge-option[aria-pressed="true"]{border-color:#8fe4ff;box-shadow:inset 0 0 0 1px rgba(143,228,255,.3)}
@@ -514,9 +515,9 @@ function load(){try{
   fallTime=0;lockTime=0;lockResets=0;effect=null;particles=[];
   if(migrated)save();return true;
 }catch(_){return false}}
-function frame(t){const dt=Math.max(0,Math.min(70,t-(lastFrame||t)));lastFrame=t;
+function frame(t){const rawDt=Math.max(0,t-(lastFrame||t)),dt=Math.min(70,rawDt);lastFrame=t;
   if(mode==='sprint'&&(status==='playing'||status==='clearing')){
-    challengeElapsedMs+=dt;
+    challengeElapsedMs+=Math.min(500,rawDt);
     if(t-lastHudTick>=150){lastHudTick=t;updateChallengeHud()}
   }
   if(status==='playing'){
