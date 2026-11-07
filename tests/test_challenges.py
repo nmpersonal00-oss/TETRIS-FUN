@@ -85,11 +85,12 @@ def run():
     assert speed, "Gravity curve function missing"
     with sync_playwright() as playwright:
         browser=playwright.chromium.launch(headless=True)
-        page=browser.new_page(
+        context=browser.new_context(
             viewport={"width":393,"height":852},
             screen={"width":393,"height":852},
             is_mobile=True,has_touch=True,user_agent=UA,
         )
+        page=context.new_page()
         # Provide a stable test-only HTTPS origin so localStorage works.
         # All requests except the in-memory HTML document are aborted.
         page.route("**/*", lambda route: route.fulfill(
